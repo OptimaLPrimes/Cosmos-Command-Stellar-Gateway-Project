@@ -42,14 +42,14 @@ const SOLAR_SYSTEM_SCALE_FACTOR = 20; // 1 AU = 20 units in the scene
 
 const solarSystemData: CelestialBodyInfo[] = [
   { name: 'Sun', type: 'Star', gravity: '274.0 m/s²', resources: ['Helium', 'Hydrogen'], terrain: 'Plasma', biome: 'Star', color: 0xFFD700, size: 4.0, position: [0,0,0], textureUrl: 'https://placehold.co/256x256/FFA500/DC143C.png?text=Sun+Surface', dataAiHint: 'sun plasma' },
-  { name: 'Mercury', type: 'Planet', gravity: '0.38 G', resources: ['Iron', 'Nickel'], terrain: 'Cratered', biome: 'Rocky', color: 0x8C8C8C, size: 0.5, position: [8, 0, 0], textureUrl: 'https://placehold.co/256x256/A0A0A0/333333.png?text=Mercury', orbitalSpeed: 0.47, dataAiHint: 'planet texture rocky' },
-  { name: 'Venus', type: 'Planet', gravity: '0.91 G', resources: ['Sulfuric Acid', 'CO2'], terrain: 'Volcanic Plains', biome: 'Hot House', color: 0xE6D2A8, size: 0.9, position: [14, 0, 0], textureUrl: 'https://placehold.co/256x256/E6D2A9/6B4F34.png?text=Venus', orbitalSpeed: 0.35, dataAiHint: 'planet texture cloudy' },
-  { name: 'Earth', type: 'Planet', gravity: '1.0 G', resources: ['Water', 'Oxygen', 'Life'], terrain: 'Varied', biome: 'Temperate', color: 0x6B93D6, size: 1.0, position: [20, 0, 0], textureUrl: 'https://placehold.co/256x256/6B93D6/1F5C2F.png?text=Earth', orbitalSpeed: 0.29, dataAiHint: 'planet texture earth-like' },
-  { name: 'Mars', type: 'Planet', gravity: '0.38 G', resources: ['Iron Oxide', 'Water Ice'], terrain: 'Canyons, Deserts', biome: 'Cold Desert', color: 0xD97C57, size: 0.7, position: [28, 0, 0], textureUrl: 'https://placehold.co/256x256/D97C57/80381F.png?text=Mars', orbitalSpeed: 0.24, dataAiHint: 'planet texture mars' },
-  { name: 'Jupiter', type: 'Planet', gravity: '2.53 G', resources: ['Hydrogen', 'Helium'], terrain: 'Gas Layers', biome: 'Gas Giant', color: 0xC9A78A, size: 2.8, position: [45, 0, 0], textureUrl: 'https://placehold.co/256x256/C9A78A/835F43.png?text=Jupiter', orbitalSpeed: 0.13, dataAiHint: 'planet texture jupiter' },
-  { name: 'Saturn', type: 'Planet', gravity: '1.07 G', resources: ['Hydrogen', 'Helium', 'Ice'], terrain: 'Gas Layers, Rings', biome: 'Gas Giant', color: 0xF0E6C6, size: 2.4, position: [65, 0, 0], textureUrl: 'https://placehold.co/256x256/F0E6C6/736A50.png?text=Saturn', orbitalSpeed: 0.09, dataAiHint: 'planet texture saturn', ringTextureUrl: 'https://placehold.co/512x64/D3CBB6/A9A086.png?text=Rings' },
-  { name: 'Uranus', type: 'Planet', gravity: '0.9 G', resources: ['Methane', 'Ammonia', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0xAEEEEE, size: 1.8, position: [85, 0, 0], textureUrl: 'https://placehold.co/256x256/AEEEEE/45B3B3.png?text=Uranus', orbitalSpeed: 0.06, dataAiHint: 'planet texture uranus' },
-  { name: 'Neptune', type: 'Planet', gravity: '1.14 G', resources: ['Methane', 'Hydrogen', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0x3A7CEC, size: 1.7, position: [100, 0, 0], textureUrl: 'https://placehold.co/256x256/3A7CEC/2A588F.png?text=Neptune', orbitalSpeed: 0.05, dataAiHint: 'planet texture neptune' },
+  { name: 'Mercury', type: 'Planet', gravity: '0.38 G', resources: ['Iron', 'Nickel'], terrain: 'Cratered', biome: 'Rocky', color: 0x8C8C8C, size: 0.5, position: [0.39 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/A0A0A0/333333.png?text=Mercury', orbitalSpeed: 0.47, dataAiHint: 'planet texture rocky' },
+  { name: 'Venus', type: 'Planet', gravity: '0.91 G', resources: ['Sulfuric Acid', 'CO2'], terrain: 'Volcanic Plains', biome: 'Hot House', color: 0xE6D2A8, size: 0.9, position: [0.72 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/E6D2A9/6B4F34.png?text=Venus', orbitalSpeed: 0.35, dataAiHint: 'planet texture cloudy' },
+  { name: 'Earth', type: 'Planet', gravity: '1.0 G', resources: ['Water', 'Oxygen', 'Life'], terrain: 'Varied', biome: 'Temperate', color: 0x6B93D6, size: 1.0, position: [1.00 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/6B93D6/1F5C2F.png?text=Earth', orbitalSpeed: 0.29, dataAiHint: 'planet texture earth-like' },
+  { name: 'Mars', type: 'Planet', gravity: '0.38 G', resources: ['Iron Oxide', 'Water Ice'], terrain: 'Canyons, Deserts', biome: 'Cold Desert', color: 0xD97C57, size: 0.7, position: [1.52 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/D97C57/80381F.png?text=Mars', orbitalSpeed: 0.24, dataAiHint: 'planet texture mars' },
+  { name: 'Jupiter', type: 'Planet', gravity: '2.53 G', resources: ['Hydrogen', 'Helium'], terrain: 'Gas Layers', biome: 'Gas Giant', color: 0xC9A78A, size: 2.8, position: [5.20 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/C9A78A/835F43.png?text=Jupiter', orbitalSpeed: 0.13, dataAiHint: 'planet texture jupiter' },
+  { name: 'Saturn', type: 'Planet', gravity: '1.07 G', resources: ['Hydrogen', 'Helium', 'Ice'], terrain: 'Gas Layers, Rings', biome: 'Gas Giant', color: 0xF0E6C6, size: 2.4, position: [9.54 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/F0E6C6/736A50.png?text=Saturn', orbitalSpeed: 0.09, dataAiHint: 'planet texture saturn', ringTextureUrl: 'https://placehold.co/512x64/D3CBB6/A9A086.png?text=Rings' },
+  { name: 'Uranus', type: 'Planet', gravity: '0.9 G', resources: ['Methane', 'Ammonia', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0xAEEEEE, size: 1.8, position: [19.2 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/AEEEEE/45B3B3.png?text=Uranus', orbitalSpeed: 0.06, dataAiHint: 'planet texture uranus' },
+  { name: 'Neptune', type: 'Planet', gravity: '1.14 G', resources: ['Methane', 'Hydrogen', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0x3A7CEC, size: 1.7, position: [30.06 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/3A7CEC/2A588F.png?text=Neptune', orbitalSpeed: 0.05, dataAiHint: 'planet texture neptune' },
   {
     name: "Halley's Comet", type: 'Comet', gravity: 'Negligible', resources: ['Water Ice', 'Dust'], terrain: 'Icy Nucleus', biome: 'Cometary Coma (active)', color: 0xE0FFFF, size: 0.15, position: [0,0,0], // Dynamic
     textureUrl: 'https://placehold.co/128x128/E0FFFF/666666.png?text=Halley', dataAiHint: 'comet icy rock',
@@ -60,16 +60,16 @@ const solarSystemData: CelestialBodyInfo[] = [
       inclination: 162.26 * (Math.PI / 180), 
       perihelionDistance: 0.586 * SOLAR_SYSTEM_SCALE_FACTOR,
       aphelionDistance: 35.082 * SOLAR_SYSTEM_SCALE_FACTOR,
-      ellipseCX: -(17.834 * SOLAR_SYSTEM_SCALE_FACTOR * 0.967),
+      ellipseCX: -(17.834 * SOLAR_SYSTEM_SCALE_FACTOR * 0.967), // Sun at focus, ellipse center shifted
       orbitalPeriodYears: 76,
     }
   }
 ];
 
 const ASTEROID_COUNT = 1000;
-const ASTEROID_BELT_INNER_RADIUS = 33;
-const ASTEROID_BELT_OUTER_RADIUS = 42;
-const ASTEROID_BELT_THICKNESS = 1.5;
+const ASTEROID_BELT_INNER_RADIUS = 2.2 * SOLAR_SYSTEM_SCALE_FACTOR; // Approx 2.2 AU
+const ASTEROID_BELT_OUTER_RADIUS = 3.2 * SOLAR_SYSTEM_SCALE_FACTOR; // Approx 3.2 AU
+const ASTEROID_BELT_THICKNESS = 1.5 * (SOLAR_SYSTEM_SCALE_FACTOR / 20); // Scale thickness relative to AU scale
 
 const EXISTING_STAR_COUNT = 5000;
 
@@ -79,7 +79,7 @@ const GALAXY_CORE_BULGE_RADIUS = GALAXY_RADIUS * 0.15;
 const GALAXY_BAR_LENGTH = GALAXY_RADIUS * 0.5;
 const GALAXY_BAR_WIDTH = GALAXY_RADIUS * 0.1;
 const GALAXY_THICKNESS = 70; 
-const GALAXY_PARTICLE_SIZE = 3.5; 
+const GALAXY_PARTICLE_SIZE = 4.0; 
 const GALAXY_VISIBILITY_START_DISTANCE = 300;
 const GALAXY_VISIBILITY_FULL_DISTANCE = 900;
 const CONTROLS_MAX_DISTANCE = 4000;
@@ -185,11 +185,11 @@ export function GalaxyMap() {
           x_pos = r * Math.sin(phi_core) * Math.cos(theta_core);
           z_pos = r * Math.sin(phi_core) * Math.sin(theta_core);
           y_pos = r * Math.cos(phi_core) * 0.5; 
-          galaxyColor.setHSL(0.04 + Math.random() * 0.08, 0.95 + Math.random() * 0.1, 0.60 + Math.random() * 0.15);
+          galaxyColor.setHSL(0.07 + Math.random() * 0.06, 0.95 + Math.random() * 0.1, 0.65 + Math.random() * 0.1);
         
         } else if (randVal < 0.45) { // 25% Bar Particles
           x_pos = (Math.random() - 0.5) * GALAXY_BAR_LENGTH;
-          const barTaperFactorX = 1 - Math.pow(Math.abs(x_pos) / (GALAXY_BAR_LENGTH / 2 + 1e-6), 1.5); 
+          const barTaperFactorX = 1 - Math.pow(Math.abs(x_pos) / (GALAXY_BAR_LENGTH / 2 + 1e-6), 1.2); 
           z_pos = (Math.random() - 0.5) * GALAXY_BAR_WIDTH * Math.max(0.1, barTaperFactorX); 
           
           const currentMaxZAtX = (GALAXY_BAR_WIDTH / 2) * Math.max(0.1, barTaperFactorX);
@@ -199,7 +199,7 @@ export function GalaxyMap() {
           const combinedTaperForY = barTaperFactorX * barTaperFactorZ_forYthickness;
           y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * 0.35 * Math.max(0.05, combinedTaperForY); 
           
-          galaxyColor.setHSL(0.08 + Math.random() * 0.07, 0.90 + Math.random() * 0.1, 0.70 + Math.random() * 0.10);
+          galaxyColor.setHSL(0.09 + Math.random() * 0.05, 0.90 + Math.random() * 0.1, 0.75 + Math.random() * 0.08);
         
         } else { // 55% Arm & Disk Particles
           isArmParticle = true;
@@ -218,7 +218,7 @@ export function GalaxyMap() {
           x_pos = r_disk * Math.cos(theta_disk);
           z_pos = r_disk * Math.sin(theta_disk);
           
-          const disturbanceMagnitude = (r_disk / GALAXY_RADIUS) * (GALAXY_RADIUS * 0.035); 
+          const disturbanceMagnitude = (r_disk / GALAXY_RADIUS) * (GALAXY_RADIUS * 0.045); // Increased disturbance
           x_pos += (Math.random() - 0.5) * disturbanceMagnitude;
           z_pos += (Math.random() - 0.5) * disturbanceMagnitude;
           
@@ -228,23 +228,23 @@ export function GalaxyMap() {
           const phaseSegment = (armPhase / (Math.PI * 0.5)) % 2; 
           const localColorTypeRand = Math.random();
           const saturation = 0.9 + Math.random() * 0.2; 
-          const lightnessMod = (Math.random() - 0.5) * 0.3;
+          const lightnessMod = (Math.random() - 0.5) * 0.2; // More subtle lightness variation
 
           if (phaseSegment < 1) { 
             if (localColorTypeRand < 0.65) { // Young Stars Dominant
-              galaxyColor.setHSL(0.55 + Math.random() * 0.15, saturation, 0.70 + lightnessMod); 
+              galaxyColor.setHSL(0.58 + Math.random() * 0.12, saturation, 0.70 + lightnessMod * 0.8); 
             } else if (localColorTypeRand < 0.90) { // Nebulae Less Dominant
-              galaxyColor.setHSL(0.80 + Math.random() * 0.15, saturation, 0.65 + lightnessMod);
+              galaxyColor.setHSL(0.83 + Math.random() * 0.12, saturation, 0.65 + lightnessMod * 0.8);
             } else { // Starburst Highlights
-              galaxyColor.setHSL(0.12 + Math.random() * 0.08, saturation, 0.90 + Math.random() * 0.1); 
+              galaxyColor.setHSL(0.10 + Math.random() * 0.1, saturation, 0.90 + Math.random() * 0.1); 
             }
           } else { 
             if (localColorTypeRand < 0.25) { // Young Stars Less Dominant
-              galaxyColor.setHSL(0.55 + Math.random() * 0.15, saturation, 0.70 + lightnessMod); 
+              galaxyColor.setHSL(0.58 + Math.random() * 0.12, saturation, 0.70 + lightnessMod * 0.8); 
             } else if (localColorTypeRand < 0.90) { // Nebulae Dominant
-              galaxyColor.setHSL(0.80 + Math.random() * 0.15, saturation, 0.65 + lightnessMod);
+              galaxyColor.setHSL(0.83 + Math.random() * 0.12, saturation, 0.65 + lightnessMod * 0.8);
             } else { // Starburst Highlights
-              galaxyColor.setHSL(0.12 + Math.random() * 0.08, saturation, 0.90 + Math.random() * 0.1);
+              galaxyColor.setHSL(0.10 + Math.random() * 0.1, saturation, 0.90 + Math.random() * 0.1);
             }
           }
         }
@@ -474,6 +474,7 @@ export function GalaxyMap() {
         
         cometGroupRef.current.updateMatrixWorld(true);
         const cometWorldPosition = new THREE.Vector3(localPositionOnEllipse.x, localPositionOnEllipse.y, 0).applyMatrix4(cometGroupRef.current.matrixWorld);
+
 
         const distanceToSun = cometWorldPosition.distanceTo(sunPosition);
 
