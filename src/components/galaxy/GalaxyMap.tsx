@@ -79,7 +79,7 @@ const GALAXY_CORE_BULGE_RADIUS = GALAXY_RADIUS * 0.15;
 const GALAXY_BAR_LENGTH = GALAXY_RADIUS * 0.5;
 const GALAXY_BAR_WIDTH = GALAXY_RADIUS * 0.1;
 const GALAXY_THICKNESS = 70; 
-const GALAXY_PARTICLE_SIZE = 3.0; 
+const GALAXY_PARTICLE_SIZE = 3.5; 
 const GALAXY_VISIBILITY_START_DISTANCE = 300;
 const GALAXY_VISIBILITY_FULL_DISTANCE = 900;
 const CONTROLS_MAX_DISTANCE = 4000;
@@ -189,21 +189,15 @@ export function GalaxyMap() {
         
         } else if (randVal < 0.45) { // 25% Bar Particles
           x_pos = (Math.random() - 0.5) * GALAXY_BAR_LENGTH;
-          
-          // Taper factor based on x-position (bar is thinner/narrower at its x-ends)
-          const barTaperFactorX = 1 - Math.pow(Math.abs(x_pos) / (GALAXY_BAR_LENGTH / 2 + 1e-6), 2.0); 
-          
-          // Z position within the bar, influenced by the X taper factor (bar is narrower in Z at its X-ends)
+          const barTaperFactorX = 1 - Math.pow(Math.abs(x_pos) / (GALAXY_BAR_LENGTH / 2 + 1e-6), 1.5); 
           z_pos = (Math.random() - 0.5) * GALAXY_BAR_WIDTH * Math.max(0.1, barTaperFactorX); 
           
-          // Taper factor based on z-position (bar is thinner in Y at its z-edges)
           const currentMaxZAtX = (GALAXY_BAR_WIDTH / 2) * Math.max(0.1, barTaperFactorX);
           const normalizedZInBar = Math.min(1.0, Math.abs(z_pos) / (currentMaxZAtX + 1e-6)); 
           const barTaperFactorZ_forYthickness = 1 - Math.pow(normalizedZInBar, 1.5); 
 
           const combinedTaperForY = barTaperFactorX * barTaperFactorZ_forYthickness;
-
-          y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * 0.25 * Math.max(0.05, combinedTaperForY); 
+          y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * 0.35 * Math.max(0.05, combinedTaperForY); 
           
           galaxyColor.setHSL(0.08 + Math.random() * 0.07, 0.90 + Math.random() * 0.1, 0.70 + Math.random() * 0.10);
         
@@ -213,7 +207,7 @@ export function GalaxyMap() {
           let theta_disk = Math.random() * 2 * Math.PI;
   
           const numArms = 2; 
-          const armTightness = 2.0;
+          const armTightness = 2.0; 
           const armPhase = (r_disk / GALAXY_RADIUS) * numArms * Math.PI * armTightness;
           
           const barInfluenceFactor = Math.max(0, 1 - (r_disk / (GALAXY_BAR_LENGTH * 0.75)));
@@ -223,8 +217,8 @@ export function GalaxyMap() {
 
           x_pos = r_disk * Math.cos(theta_disk);
           z_pos = r_disk * Math.sin(theta_disk);
-
-          const disturbanceMagnitude = (r_disk / GALAXY_RADIUS) * (GALAXY_RADIUS * 0.025); 
+          
+          const disturbanceMagnitude = (r_disk / GALAXY_RADIUS) * (GALAXY_RADIUS * 0.035); 
           x_pos += (Math.random() - 0.5) * disturbanceMagnitude;
           z_pos += (Math.random() - 0.5) * disturbanceMagnitude;
           
@@ -233,22 +227,24 @@ export function GalaxyMap() {
   
           const phaseSegment = (armPhase / (Math.PI * 0.5)) % 2; 
           const localColorTypeRand = Math.random();
+          const saturation = 0.9 + Math.random() * 0.2; 
+          const lightnessMod = (Math.random() - 0.5) * 0.3;
 
           if (phaseSegment < 1) { 
-            if (localColorTypeRand < 0.65) { 
-              galaxyColor.setHSL(0.55 + Math.random() * 0.15, 1.0 - Math.random() * 0.05, 0.70 + (Math.random() - 0.5) * 0.25); 
-            } else if (localColorTypeRand < 0.90) { 
-              galaxyColor.setHSL(0.80 + Math.random() * 0.15, 1.0 - Math.random() * 0.05, 0.65 + (Math.random() - 0.5) * 0.3);
-            } else { 
-              galaxyColor.setHSL(0.12 + Math.random() * 0.08, 0.9 + Math.random() * 0.1, 0.90 + Math.random() * 0.1); 
+            if (localColorTypeRand < 0.65) { // Young Stars Dominant
+              galaxyColor.setHSL(0.55 + Math.random() * 0.15, saturation, 0.70 + lightnessMod); 
+            } else if (localColorTypeRand < 0.90) { // Nebulae Less Dominant
+              galaxyColor.setHSL(0.80 + Math.random() * 0.15, saturation, 0.65 + lightnessMod);
+            } else { // Starburst Highlights
+              galaxyColor.setHSL(0.12 + Math.random() * 0.08, saturation, 0.90 + Math.random() * 0.1); 
             }
           } else { 
-            if (localColorTypeRand < 0.25) { 
-              galaxyColor.setHSL(0.55 + Math.random() * 0.15, 1.0 - Math.random() * 0.05, 0.70 + (Math.random() - 0.5) * 0.25); 
-            } else if (localColorTypeRand < 0.90) { 
-              galaxyColor.setHSL(0.80 + Math.random() * 0.15, 1.0 - Math.random() * 0.05, 0.65 + (Math.random() - 0.5) * 0.3);
-            } else { 
-              galaxyColor.setHSL(0.12 + Math.random() * 0.08, 0.9 + Math.random() * 0.1, 0.90 + Math.random() * 0.1);
+            if (localColorTypeRand < 0.25) { // Young Stars Less Dominant
+              galaxyColor.setHSL(0.55 + Math.random() * 0.15, saturation, 0.70 + lightnessMod); 
+            } else if (localColorTypeRand < 0.90) { // Nebulae Dominant
+              galaxyColor.setHSL(0.80 + Math.random() * 0.15, saturation, 0.65 + lightnessMod);
+            } else { // Starburst Highlights
+              galaxyColor.setHSL(0.12 + Math.random() * 0.08, saturation, 0.90 + Math.random() * 0.1);
             }
           }
         }
@@ -474,12 +470,10 @@ export function GalaxyMap() {
         
         const sunPosition = new THREE.Vector3(0,0,0); 
         
-        // Calculate comet's position in its own rotated coordinate system first
         const localPositionOnEllipse = cometOrbitCurveRef.current.getPoint(cometData.currentU);
         
-        // Create a world matrix for the comet group to transform local position to world
-        cometGroupRef.current.updateMatrixWorld(true); // Ensure matrixWorld is up-to-date
-        const cometWorldPosition = localPositionOnEllipse.clone().applyMatrix4(cometGroupRef.current.matrixWorld);
+        cometGroupRef.current.updateMatrixWorld(true);
+        const cometWorldPosition = new THREE.Vector3(localPositionOnEllipse.x, localPositionOnEllipse.y, 0).applyMatrix4(cometGroupRef.current.matrixWorld);
 
         const distanceToSun = cometWorldPosition.distanceTo(sunPosition);
 
@@ -502,7 +496,7 @@ export function GalaxyMap() {
             cometData.currentU = 0; 
         }
         
-        cometMesh.position.set(localPositionOnEllipse.x, localPositionOnEllipse.y, 0); // Update local position
+        cometMesh.position.set(localPositionOnEllipse.x, localPositionOnEllipse.y, 0);
         cometMesh.rotation.y += 0.005;
       }
 
