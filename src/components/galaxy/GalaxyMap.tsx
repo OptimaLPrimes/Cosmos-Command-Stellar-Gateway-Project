@@ -70,6 +70,18 @@ const ASTEROID_BELT_INNER_RADIUS = 33;
 const ASTEROID_BELT_OUTER_RADIUS = 42;
 const ASTEROID_BELT_THICKNESS = 1.5;
 
+const EXISTING_STAR_COUNT = 5000; // Reduced from 15000
+
+const GALAXY_PARTICLE_COUNT = 25000;
+const GALAXY_RADIUS = 1500;
+const GALAXY_CORE_RADIUS = 300;
+const GALAXY_THICKNESS = 70;
+const GALAXY_PARTICLE_SIZE = 2.5;
+const GALAXY_VISIBILITY_START_DISTANCE = 300;
+const GALAXY_VISIBILITY_FULL_DISTANCE = 900; // Camera distance when galaxy is fully visible
+const CONTROLS_MAX_DISTANCE = 4000;
+
+
 export function GalaxyMap() {
   const mountRef = useRef<HTMLDivElement>(null);
   const [selectedBody, setSelectedBody] = useState<CelestialBodyInfo | null>(null);
@@ -87,10 +99,16 @@ export function GalaxyMap() {
 
   const clockRef = useRef<THREE.Clock | null>(null);
 
-  // Refs for shared asteroid resources to dispose
   const asteroidGeometryRef = useRef<THREE.DodecahedronGeometry | null>(null);
   const asteroidTextureRef = useRef<THREE.Texture | null>(null);
   const asteroidMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null);
+
+  const starGeometryRef = useRef<THREE.BufferGeometry | null>(null);
+  const starMaterialRef = useRef<THREE.PointsMaterial | null>(null);
+
+  const milkyWayParticlesRef = useRef<THREE.Points | null>(null);
+  const milkyWayGeometryRef = useRef<THREE.BufferGeometry | null>(null);
+  const milkyWayMaterialRef = useRef<THREE.PointsMaterial | null>(null);
 
 
   useEffect(() => {
@@ -103,9 +121,9 @@ export function GalaxyMap() {
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x0A000A); 
+    scene.background = new THREE.Color(0x050005); // Darker background
 
-    const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, 2000);
+    const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, CONTROLS_MAX_DISTANCE * 1.5);
     camera.position.set(0, 45, 60); 
     cameraRef.current = camera;
 
@@ -119,7 +137,7 @@ export function GalaxyMap() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 1;
-    controls.maxDistance = 1000;
+    controls.maxDistance = CONTROLS_MAX_DISTANCE;
     controlsRef.current = controls;
     
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); 
@@ -129,13 +147,16 @@ export function GalaxyMap() {
     scene.add(pointLight);
 
     const starGeometry = new THREE.BufferGeometry();
-    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, sizeAttenuation: true });
+    starGeometryRef.current = starGeometry;
+    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, sizeAttenuation: true, transparent: true, opacity: 0.7 });
+    starMaterialRef.current = starMaterial;
     const starVertices = [];
-    for (let i = 0; i < 15000; i++) {
-      const x = (Math.random() - 0.5) * 2500;
-      const y = (Math.random() - 0.5) * 2500;
-      const z = (Math.random() - 0.5) * 2500;
-      if (Math.sqrt(x*x + y*y + z*z) > 200) { 
+    for (let i = 0; i < EXISTING_STAR_COUNT; i++) {
+      const x = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2);
+      const y = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2);
+      const z = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2);
+      const dist = Math.sqrt(x*x + y*y + z*z);
+      if (dist > 300 && dist < CONTROLS_MAX_DISTANCE * 1.2) { // Ensure stars are far out
          starVertices.push(x, y, z);
       }
     }
@@ -144,6 +165,57 @@ export function GalaxyMap() {
     scene.add(stars);
     
     const textureLoader = new THREE.TextureLoader();
+
+    // Create Milky Way Galaxy
+    const galaxyVerticesArray: number[] = [];
+    const galaxyColorsArray: number[] = [];
+    const galaxyColor = new THREE.Color();
+
+    for (let i = 0; i < GALAXY_PARTICLE_COUNT; i++) {
+      let r, y_spread_factor;
+      if (Math.random() < 0.2) { // 20% chance for a core star
+        r = Math.random() * GALAXY_CORE_RADIUS;
+        y_spread_factor = 0.3; // Core is flatter
+      } else { // 80% chance for a disk star
+        r = GALAXY_CORE_RADIUS + Math.random() * (GALAXY_RADIUS - GALAXY_CORE_RADIUS);
+        y_spread_factor = 1.0;
+      }
+
+      const theta = Math.random() * 2 * Math.PI;
+      const x_pos = r * Math.cos(theta);
+      const z_pos = r * Math.sin(theta);
+      const y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * y_spread_factor * (0.2 + 0.8 * (r / GALAXY_RADIUS));
+      
+      galaxyVerticesArray.push(x_pos, y_pos, z_pos);
+
+      if (Math.random() < 0.7) { 
+        galaxyColor.setHSL(0.55 + Math.random() * 0.2, 0.8 + Math.random()*0.2, 0.6 + Math.random() * 0.3); // Blues / Whites
+      } else { 
+        galaxyColor.setHSL(0.05 + Math.random() * 0.1, 0.8 + Math.random()*0.2, 0.6 + Math.random() * 0.2); // Pale Yellows/Oranges
+      }
+      galaxyColorsArray.push(galaxyColor.r, galaxyColor.g, galaxyColor.b);
+    }
+
+    const mwGeometry = new THREE.BufferGeometry();
+    mwGeometry.setAttribute('position', new THREE.Float32BufferAttribute(galaxyVerticesArray, 3));
+    mwGeometry.setAttribute('color', new THREE.Float32BufferAttribute(galaxyColorsArray, 3));
+    milkyWayGeometryRef.current = mwGeometry;
+
+    const mwMaterial = new THREE.PointsMaterial({
+      size: GALAXY_PARTICLE_SIZE,
+      sizeAttenuation: true,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0, // Start invisible
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    milkyWayMaterialRef.current = mwMaterial;
+
+    const milkyWay = new THREE.Points(mwGeometry, mwMaterial);
+    scene.add(milkyWay);
+    milkyWayParticlesRef.current = milkyWay;
+
 
     solarSystemData.forEach(bodyData => {
       if (bodyData.type === 'Comet' && bodyData.orbitalParams) {
@@ -229,8 +301,8 @@ export function GalaxyMap() {
 
     const asteroids = new THREE.Group();
     asteroidsGroupRef.current = asteroids;
-    asteroidGeometryRef.current = new THREE.DodecahedronGeometry(1, 0); // Shared geometry for asteroids
-    asteroidTextureRef.current = textureLoader.load('https://placehold.co/128x128/A9A9A9/696969.png?text=Rock'); // data-ai-hint="asteroid texture"
+    asteroidGeometryRef.current = new THREE.DodecahedronGeometry(1, 0); 
+    asteroidTextureRef.current = textureLoader.load('https://placehold.co/128x128/A9A9A9/696969.png?text=Rock'); 
     asteroidMaterialRef.current = new THREE.MeshStandardMaterial({ 
         map: asteroidTextureRef.current, 
         roughness: 0.9, 
@@ -240,14 +312,14 @@ export function GalaxyMap() {
     for (let i = 0; i < ASTEROID_COUNT; i++) {
       if (!asteroidGeometryRef.current || !asteroidMaterialRef.current) continue;
       const asteroidMesh = new THREE.Mesh(asteroidGeometryRef.current, asteroidMaterialRef.current);
-      const size = Math.random() * 0.3 + 0.08; // Increased size for asteroids
+      const size = Math.random() * 0.3 + 0.08; 
       asteroidMesh.scale.set(size, size, size * (Math.random() * 0.5 + 0.75)); 
       const radius = ASTEROID_BELT_INNER_RADIUS + Math.random() * (ASTEROID_BELT_OUTER_RADIUS - ASTEROID_BELT_INNER_RADIUS);
       const angle = Math.random() * Math.PI * 2;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
-      const y = (Math.random() - 0.5) * ASTEROID_BELT_THICKNESS;
-      asteroidMesh.position.set(x, y, z);
+      const y_ast = (Math.random() - 0.5) * ASTEROID_BELT_THICKNESS;
+      asteroidMesh.position.set(x, y_ast, z);
       asteroidMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       asteroidMesh.userData = { orbitalRadius: radius, orbitalAngle: angle, orbitalSpeed: (0.01 + Math.random() * 0.02) * (ASTEROID_BELT_OUTER_RADIUS / radius) * 0.5, rotationSpeed: new THREE.Vector3((Math.random() - 0.5) * 0.005, (Math.random() - 0.5) * 0.005, (Math.random() - 0.5) * 0.005) };
       asteroids.add(asteroidMesh);
@@ -315,9 +387,9 @@ export function GalaxyMap() {
               asteroid.position.x = Math.cos(currentAngle) * P.orbitalRadius;
               asteroid.position.z = Math.sin(currentAngle) * P.orbitalRadius;
               if (P.rotationSpeed) {
-                asteroid.rotation.x += P.rotationSpeed.x;
-                asteroid.rotation.y += P.rotationSpeed.y;
-                asteroid.rotation.z += P.rotationSpeed.z;
+                asteroid.rotation.x += P.rotationSpeed.x * deltaTime * 20; // make rotation speed more noticeable
+                asteroid.rotation.y += P.rotationSpeed.y * deltaTime * 20;
+                asteroid.rotation.z += P.rotationSpeed.z * deltaTime * 20;
               }
             }
           }
@@ -331,7 +403,12 @@ export function GalaxyMap() {
         
         const sunPosition = new THREE.Vector3(0,0,0);
         const cometWorldPosition = new THREE.Vector3();
-        cometMesh.getWorldPosition(cometWorldPosition);
+        // Need to get world position from the mesh itself as it's parented to an inclined group
+        if (cometMesh.parent) { // cometMesh is in cometGroupRef
+            cometMesh.parent.localToWorld(cometMesh.position.clone(cometWorldPosition));
+        } else {
+             cometMesh.getWorldPosition(cometWorldPosition);
+        }
         const distanceToSun = cometWorldPosition.distanceTo(sunPosition);
 
         const minSpeedFactor = 0.0005 / (params.orbitalPeriodYears / 76) ;
@@ -358,6 +435,17 @@ export function GalaxyMap() {
         cometMesh.rotation.y += 0.005;
       }
 
+      if (milkyWayParticlesRef.current && milkyWayMaterialRef.current && controlsRef.current) {
+        milkyWayParticlesRef.current.rotation.y += 0.00002 * deltaTime * 60; // Very slow rotation
+        const distance = controlsRef.current.getDistance();
+        let opacity = 0;
+        if (distance > GALAXY_VISIBILITY_START_DISTANCE) {
+          opacity = Math.min(1, (distance - GALAXY_VISIBILITY_START_DISTANCE) / (GALAXY_VISIBILITY_FULL_DISTANCE - GALAXY_VISIBILITY_START_DISTANCE));
+        }
+        milkyWayMaterialRef.current.opacity = opacity * 0.4; // Max opacity
+      }
+
+
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     };
     animate();
@@ -376,66 +464,76 @@ export function GalaxyMap() {
       if (rendererRef.current && currentMount.contains(rendererRef.current.domElement)) {
         currentMount.removeChild(rendererRef.current.domElement);
       }
-      if (rendererRef.current) rendererRef.current.dispose();
+      
       if (controlsRef.current) controlsRef.current.dispose();
+      
+      // Dispose Milky Way resources
+      if (milkyWayGeometryRef.current) milkyWayGeometryRef.current.dispose();
+      if (milkyWayMaterialRef.current) milkyWayMaterialRef.current.dispose();
+      if (milkyWayParticlesRef.current && sceneRef.current) sceneRef.current.remove(milkyWayParticlesRef.current);
+      milkyWayParticlesRef.current = null;
+      milkyWayGeometryRef.current = null;
+      milkyWayMaterialRef.current = null;
+
+      // Dispose background stars resources
+      if (starGeometryRef.current) starGeometryRef.current.dispose();
+      if (starMaterialRef.current) starMaterialRef.current.dispose();
+      // The 'stars' THREE.Points object itself is implicitly removed when scene is cleared or parent is.
 
       if (asteroidsGroupRef.current && sceneRef.current) {
-        sceneRef.current.remove(asteroidsGroupRef.current); // Group removal handles meshes
-        asteroidsGroupRef.current = null;
+        sceneRef.current.remove(asteroidsGroupRef.current); 
       }
-      if (asteroidGeometryRef.current) {
-        asteroidGeometryRef.current.dispose();
-        asteroidGeometryRef.current = null;
-      }
-      if (asteroidMaterialRef.current) {
-        asteroidMaterialRef.current.dispose();
-        asteroidMaterialRef.current = null;
-      }
-      if (asteroidTextureRef.current) {
-        asteroidTextureRef.current.dispose();
-        asteroidTextureRef.current = null;
-      }
+      if (asteroidGeometryRef.current) asteroidGeometryRef.current.dispose();
+      if (asteroidMaterialRef.current) asteroidMaterialRef.current.dispose();
+      if (asteroidTextureRef.current) asteroidTextureRef.current.dispose();
+      asteroidsGroupRef.current = null;
+      asteroidGeometryRef.current = null;
+      asteroidMaterialRef.current = null;
+      asteroidTextureRef.current = null;
       
       if (cometGroupRef.current && sceneRef.current) {
         cometGroupRef.current.traverse(object => {
           if (object instanceof THREE.Mesh) {
-            object.geometry.dispose();
+            if (object.geometry) object.geometry.dispose();
             if (Array.isArray(object.material)) {
               object.material.forEach(material => material.dispose());
-            } else {
+            } else if (object.material) {
               (object.material as THREE.Material).dispose();
             }
           } else if (object instanceof THREE.Line) {
-             object.geometry.dispose();
-            (object.material as THREE.Material).dispose();
+             if (object.geometry) object.geometry.dispose();
+             if (object.material) (object.material as THREE.Material).dispose();
           }
         });
         sceneRef.current.remove(cometGroupRef.current);
       }
       cometMeshRef.current = null;
-      cometOrbitCurveRef.current = null;
+      cometOrbitCurveRef.current = null; // Curve itself doesn't need dispose
       cometGroupRef.current = null;
 
 
       if (sceneRef.current) {
         sceneRef.current.traverse(object => {
            if (object instanceof THREE.Mesh) {
-                object.geometry.dispose();
+                if (object.geometry) object.geometry.dispose();
                 if (Array.isArray(object.material)) {
                     object.material.forEach(material => material.dispose());
-                } else {
+                } else if (object.material) {
                     (object.material as THREE.Material).dispose();
                 }
             } else if (object instanceof THREE.Line) {
-                 object.geometry.dispose();
-                (object.material as THREE.Material).dispose();
-            } else if (object instanceof THREE.Points) {
-                object.geometry.dispose();
-                (object.material as THREE.Material).dispose();
+                 if (object.geometry) object.geometry.dispose();
+                 if (object.material) (object.material as THREE.Material).dispose();
+            } else if (object instanceof THREE.Points && object !== milkyWayParticlesRef.current && object !== stars) { // Avoid re-disposing manually managed points
+                if (object.geometry) object.geometry.dispose();
+                if (object.material) (object.material as THREE.Material).dispose();
             }
         });
       }
       planetsRef.current = [];
+      if (rendererRef.current) rendererRef.current.dispose(); // Dispose renderer last
+      rendererRef.current = null; // clear ref
+      sceneRef.current = null; // clear ref
     };
   }, []);
   
@@ -457,7 +555,7 @@ export function GalaxyMap() {
 
   return (
     <div className="relative w-full h-[calc(100vh-10rem)] rounded-lg overflow-hidden border border-primary/30 shadow-2xl shadow-primary/20">
-      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets orbit asteroid belt comet" />
+      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets orbit asteroid belt comet milky way galaxy" />
       <div className="absolute top-4 right-4 flex flex-col gap-2">
         <Button size="icon" onClick={() => zoom(1.2)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomInIcon className="w-5 h-5" /></Button>
         <Button size="icon" onClick={() => zoom(0.8)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomOutIcon className="w-5 h-5" /></Button>
@@ -503,3 +601,4 @@ export function GalaxyMap() {
   );
 }
 
+    
