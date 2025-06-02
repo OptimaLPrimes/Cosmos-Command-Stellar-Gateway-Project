@@ -79,7 +79,7 @@ const GALAXY_CORE_BULGE_RADIUS = GALAXY_RADIUS * 0.15;
 const GALAXY_BAR_LENGTH = GALAXY_RADIUS * 0.5;
 const GALAXY_BAR_WIDTH = GALAXY_RADIUS * 0.1;
 const GALAXY_THICKNESS = 70; 
-const GALAXY_PARTICLE_SIZE = 2.8; // Slightly increased particle size
+const GALAXY_PARTICLE_SIZE = 2.8; 
 const GALAXY_VISIBILITY_START_DISTANCE = 300;
 const GALAXY_VISIBILITY_FULL_DISTANCE = 900;
 const CONTROLS_MAX_DISTANCE = 4000;
@@ -178,21 +178,21 @@ export function GalaxyMap() {
         const randVal = Math.random();
         let isArmParticle = false;
   
-        if (randVal < 0.2) { // 20% Core Bulge Particles (densest, most spherical)
+        if (randVal < 0.2) { // 20% Core Bulge Particles
           const r = Math.random() * GALAXY_CORE_BULGE_RADIUS;
           const theta_core = Math.random() * 2 * Math.PI;
           const phi_core = Math.acos(2 * Math.random() - 1); 
           x_pos = r * Math.sin(phi_core) * Math.cos(theta_core);
           z_pos = r * Math.sin(phi_core) * Math.sin(theta_core);
           y_pos = r * Math.cos(phi_core) * 0.5; 
-          galaxyColor.setHSL(0.05 + Math.random() * 0.15, 0.95, 0.65 + Math.random() * 0.15); // Richer Yellows, Oranges, some deep Reds
+          galaxyColor.setHSL(0.04 + Math.random() * 0.08, 0.95, 0.60 + Math.random() * 0.15); // Richer, slightly reddish-oranges/yellows
         
         } else if (randVal < 0.45) { // 25% Bar Particles
           x_pos = (Math.random() - 0.5) * GALAXY_BAR_LENGTH;
           const barTaperFactor = 1 - Math.pow(Math.abs(x_pos) / (GALAXY_BAR_LENGTH / 2 + 1e-6), 2.5); 
           z_pos = (Math.random() - 0.5) * GALAXY_BAR_WIDTH * Math.max(0.1, barTaperFactor); 
           y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * 0.20 * Math.max(0.1, barTaperFactor); 
-          galaxyColor.setHSL(0.08 + Math.random() * 0.12, 0.90, 0.70 + Math.random() * 0.10); // Bright Oranges/Yellows
+          galaxyColor.setHSL(0.08 + Math.random() * 0.07, 0.90, 0.70 + Math.random() * 0.10); // Bright, luminous yellows/light oranges
         
         } else { // 55% Arm & Disk Particles
           isArmParticle = true;
@@ -200,7 +200,7 @@ export function GalaxyMap() {
           let theta_disk = Math.random() * 2 * Math.PI;
   
           const numArms = 2; 
-          const armTightness = 1.5; 
+          const armTightness = 1.6; // Slightly tighter arms
           const armPhase = (r_disk / GALAXY_RADIUS) * numArms * Math.PI * armTightness;
           
           const barInfluenceFactor = Math.max(0, 1 - (r_disk / (GALAXY_BAR_LENGTH * 0.75)));
@@ -215,14 +215,12 @@ export function GalaxyMap() {
           y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * diskThicknessFactor;
   
           const colorTypeRand = Math.random();
-          if (colorTypeRand < 0.45) { 
-            galaxyColor.setHSL(0.55 + Math.random() * 0.20, 0.95, 0.7 + Math.random() * 0.2); // Vibrant Blues, Cyans, some Aquamarines
-          } else if (colorTypeRand < 0.80) { 
-            galaxyColor.setHSL(0.82 + Math.random() * 0.18, 0.95, 0.68 + Math.random() * 0.15); // Intense Pinks, Magentas, Violets
-          } else if (colorTypeRand < 0.95) { 
-            galaxyColor.setHSL(0.45 + Math.random() * 0.10, 0.85, 0.65 + Math.random() * 0.1); // Teal/Greenish nebulae hints
-          } else { 
-             galaxyColor.setHSL(0.15 + Math.random() * 0.05, 0.9, 0.85 + Math.random() * 0.1); // Bright White/Pale Yellow highlights
+          if (colorTypeRand < 0.50) { // 50% Young Stars - Vibrant Blues/Cyans
+            galaxyColor.setHSL(0.55 + Math.random() * 0.15, 1.0, 0.70 + Math.random() * 0.15); 
+          } else if (colorTypeRand < 0.85) { // 35% Nebulae - Pinks/Magentas/Violets
+            galaxyColor.setHSL(0.80 + Math.random() * 0.15, 1.0, 0.65 + Math.random() * 0.20);
+          } else { // 15% Starburst Highlights - Bright White/Pale Yellow
+             galaxyColor.setHSL(0.12 + Math.random() * 0.08, 0.9, 0.88 + Math.random() * 0.1); 
           }
         }
         
@@ -486,7 +484,7 @@ export function GalaxyMap() {
         if (distance > GALAXY_VISIBILITY_START_DISTANCE) {
           opacity = Math.min(1, (distance - GALAXY_VISIBILITY_START_DISTANCE) / (GALAXY_VISIBILITY_FULL_DISTANCE - GALAXY_VISIBILITY_START_DISTANCE));
         }
-        milkyWayMaterialRef.current.opacity = opacity * 0.6; // Increased max opacity for galaxy
+        milkyWayMaterialRef.current.opacity = opacity * 0.7; // Slightly increased max opacity for galaxy
       }
 
 
