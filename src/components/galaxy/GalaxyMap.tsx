@@ -37,6 +37,10 @@ const solarSystemData: CelestialBodyInfo[] = [
   { name: 'Neptune', type: 'Planet', gravity: '1.14 G', resources: ['Methane', 'Hydrogen', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0x3A7CEC, size: 1.7, position: [100, 0, 0], textureUrl: 'https://placehold.co/256x256/3A7CEC/2A588F.png?text=Neptune', orbitalSpeed: 0.05, dataAiHint: 'planet texture neptune' },
 ];
 
+const ASTEROID_COUNT = 300;
+const ASTEROID_BELT_INNER_RADIUS = 33; // Between Mars (28) and Jupiter (45)
+const ASTEROID_BELT_OUTER_RADIUS = 42;
+const ASTEROID_BELT_THICKNESS = 1.5; // Vertical spread of the belt
 
 export function GalaxyMap() {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -47,6 +51,8 @@ export function GalaxyMap() {
   const controlsRef = useRef<OrbitControls | null>(null);
   const planetsRef = useRef<THREE.Mesh[]>([]);
   const clockRef = useRef<THREE.Clock | null>(null);
+  const asteroidsGroupRef = useRef<THREE.Group | null>(null);
+
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -58,10 +64,10 @@ export function GalaxyMap() {
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x1A001A); 
+    scene.background = new THREE.Color(0x0A000A); // Slightly darker background
 
-    const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, 1000);
-    camera.position.set(0, 35, 50); 
+    const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, 2000); // Increased far plane
+    camera.position.set(0, 45, 60);  // Adjusted camera position
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -74,23 +80,23 @@ export function GalaxyMap() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 5;
-    controls.maxDistance = 250; 
+    controls.maxDistance = 300; // Increased max distance
     controlsRef.current = controls;
     
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); 
     scene.add(ambientLight);
-    const pointLight = new THREE.PointLight(0xffffff, 2.5, 1200); 
+    const pointLight = new THREE.PointLight(0xffffff, 3.0, 1500); 
     pointLight.position.set(0, 0, 0); 
     scene.add(pointLight);
 
     const starGeometry = new THREE.BufferGeometry();
-    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
+    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, sizeAttenuation: true }); // Adjusted star size
     const starVertices = [];
-    for (let i = 0; i < 10000; i++) {
-      const x = (Math.random() - 0.5) * 2000;
-      const y = (Math.random() - 0.5) * 2000;
-      const z = (Math.random() - 0.5) * 2000;
-      if (Math.sqrt(x*x + y*y + z*z) > 150) { 
+    for (let i = 0; i < 15000; i++) { // More stars
+      const x = (Math.random() - 0.5) * 2500; // Wider spread
+      const y = (Math.random() - 0.5) * 2500;
+      const z = (Math.random() - 0.5) * 2500;
+      if (Math.sqrt(x*x + y*y + z*z) > 200) { 
          starVertices.push(x, y, z);
       }
     }
@@ -115,7 +121,6 @@ export function GalaxyMap() {
       bodyMesh.name = bodyData.name; 
       scene.add(bodyMesh);
 
-      // Add rings for Saturn
       if (bodyData.name === 'Saturn' && bodyData.ringTextureUrl) {
         const ringTexture = textureLoader.load(bodyData.ringTextureUrl);
         const ringGeometry = new THREE.RingGeometry(bodyData.size * 1.2, bodyData.size * 2.2, 64);
@@ -126,9 +131,9 @@ export function GalaxyMap() {
           opacity: 0.7 
         });
         const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
-        ringMesh.rotation.x = Math.PI * 0.45; // Tilt the rings
-        ringMesh.userData.dataAiHint = "planet rings"; // For potential future use
-        bodyMesh.add(ringMesh); // Add rings as a child of Saturn
+        ringMesh.rotation.x = Math.PI * 0.45; 
+        ringMesh.userData.dataAiHint = "planet rings"; 
+        bodyMesh.add(ringMesh); 
       }
 
       if (bodyData.type === 'Planet' && bodyData.orbitalSpeed) {
@@ -145,11 +150,49 @@ export function GalaxyMap() {
             orbitPoints.push(new THREE.Vector3(Math.cos(theta) * orbitRadius, bodyData.position[1], Math.sin(theta) * orbitRadius));
         }
         const orbitLineGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
-        const orbitLineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
+        const orbitLineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
         const orbitLine = new THREE.Line(orbitLineGeometry, orbitLineMaterial);
         scene.add(orbitLine);
       }
     });
+
+    // Asteroid Belt
+    const asteroids = new THREE.Group();
+    asteroidsGroupRef.current = asteroids;
+    const asteroidGeometry = new THREE.DodecahedronGeometry(1, 0); // Base geometry, 1 for radius, 0 for detail
+    const asteroidMaterial = new THREE.MeshStandardMaterial({
+      color: 0x6c5f5b, // Brownish-grey
+      roughness: 0.9,
+      metalness: 0.1,
+    });
+
+    for (let i = 0; i < ASTEROID_COUNT; i++) {
+      const asteroidMesh = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
+      const size = Math.random() * 0.12 + 0.03; // Asteroid size: 0.03 to 0.15
+      asteroidMesh.scale.set(size, size, size * (Math.random() * 0.5 + 0.75)); // Slightly irregular scaling
+
+      const radius = ASTEROID_BELT_INNER_RADIUS + Math.random() * (ASTEROID_BELT_OUTER_RADIUS - ASTEROID_BELT_INNER_RADIUS);
+      const angle = Math.random() * Math.PI * 2;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const y = (Math.random() - 0.5) * ASTEROID_BELT_THICKNESS;
+
+      asteroidMesh.position.set(x, y, z);
+      asteroidMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+
+      asteroidMesh.userData.orbitalRadius = radius;
+      asteroidMesh.userData.orbitalAngle = angle;
+      // Orbital speed: inversely proportional to radius (Kepler-ish), with some randomness, and slower than planets
+      asteroidMesh.userData.orbitalSpeed = (0.01 + Math.random() * 0.02) * (ASTEROID_BELT_OUTER_RADIUS / radius) * 0.5;
+      asteroidMesh.userData.rotationSpeed = new THREE.Vector3(
+        (Math.random() - 0.5) * 0.005,
+        (Math.random() - 0.5) * 0.005,
+        (Math.random() - 0.5) * 0.005
+      );
+      asteroids.add(asteroidMesh);
+    }
+    scene.add(asteroids);
+
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -164,7 +207,6 @@ export function GalaxyMap() {
       
       if (intersects.length > 0) {
         let clickedObject = intersects[0].object;
-        // If rings are clicked, get the parent (Saturn)
         if (clickedObject.parent && clickedObject.parent.userData.name === 'Saturn') {
           clickedObject = clickedObject.parent;
         }
@@ -186,8 +228,6 @@ export function GalaxyMap() {
       sceneRef.current.children.forEach(obj => {
         if(obj.userData.name && obj instanceof THREE.Mesh) { 
           obj.rotation.y += 0.002; 
-          // If it's Saturn, its rings (children) will rotate with it.
-          // If specific ring rotation is desired independent of planet body, it can be added here.
         }
       });
 
@@ -200,6 +240,26 @@ export function GalaxyMap() {
           planet.position.z = Math.sin(currentAngle) * P.orbitalRadius;
         }
       });
+
+      if (asteroidsGroupRef.current) {
+        asteroidsGroupRef.current.children.forEach(asteroid => {
+          if (asteroid instanceof THREE.Mesh) {
+            const P = asteroid.userData;
+            if (P.orbitalSpeed && P.orbitalRadius !== undefined && P.orbitalAngle !== undefined) {
+              const currentAngle = P.orbitalAngle + elapsedTime * P.orbitalSpeed;
+              asteroid.position.x = Math.cos(currentAngle) * P.orbitalRadius;
+              asteroid.position.z = Math.sin(currentAngle) * P.orbitalRadius;
+              // Y position is static for asteroids after initial placement
+
+              if (P.rotationSpeed) {
+                asteroid.rotation.x += P.rotationSpeed.x;
+                asteroid.rotation.y += P.rotationSpeed.y;
+                asteroid.rotation.z += P.rotationSpeed.z;
+              }
+            }
+          }
+        });
+      }
 
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     };
@@ -221,6 +281,26 @@ export function GalaxyMap() {
       }
       if (rendererRef.current) rendererRef.current.dispose();
       if (controlsRef.current) controlsRef.current.dispose();
+
+      if (asteroidsGroupRef.current && sceneRef.current) {
+        asteroidsGroupRef.current.children.forEach(child => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            if (Array.isArray(child.material)) {
+              child.material.forEach(material => material.dispose());
+            } else {
+              (child.material as THREE.Material).dispose();
+            }
+          }
+        });
+        sceneRef.current.remove(asteroidsGroupRef.current); // Remove group from scene
+        asteroidsGroupRef.current = null;
+      }
+      // Dispose shared asteroid geometry and material if they were stored outside loop
+      asteroidGeometry.dispose();
+      asteroidMaterial.dispose();
+
+
       if (sceneRef.current) {
         sceneRef.current.traverse(object => {
           if (object instanceof THREE.Mesh) {
@@ -247,7 +327,7 @@ export function GalaxyMap() {
   
   const zoom = (factor: number) => {
     if(controlsRef.current) {
-      controlsRef.current.dollyIn(factor);
+      controlsRef.current.dollyIn(factor); // dollyIn makes it zoom in, dollyOut zooms out. Factor > 1 zooms in.
       controlsRef.current.update();
     }
   }
@@ -255,15 +335,16 @@ export function GalaxyMap() {
   const resetView = () => {
     if (controlsRef.current && cameraRef.current) {
       controlsRef.current.reset();
-      cameraRef.current.position.set(0, 35, 50); 
-      controlsRef.current.target.set(0,0,0);
+      // Reset to a suitable overview position
+      cameraRef.current.position.set(0, 45, 60); 
+      controlsRef.current.target.set(0,0,0); // Look at the center (Sun)
       controlsRef.current.update();
     }
   }
 
   return (
     <div className="relative w-full h-[calc(100vh-10rem)] rounded-lg overflow-hidden border border-primary/30 shadow-2xl shadow-primary/20">
-      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets orbit" />
+      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets orbit asteroid belt" />
       <div className="absolute top-4 right-4 flex flex-col gap-2">
         <Button size="icon" onClick={() => zoom(1.2)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomInIcon className="w-5 h-5" /></Button>
         <Button size="icon" onClick={() => zoom(0.8)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomOutIcon className="w-5 h-5" /></Button>
@@ -276,7 +357,7 @@ export function GalaxyMap() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 100 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="absolute top-4 left-4 w-full max-w-xs z-10" // Added z-index
+            className="absolute top-4 left-4 w-full max-w-xs z-10"
           >
             <Card className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -299,4 +380,3 @@ export function GalaxyMap() {
     </div>
   );
 }
-
