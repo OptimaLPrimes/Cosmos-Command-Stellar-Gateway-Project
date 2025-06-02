@@ -55,14 +55,10 @@ const solarSystemData: CelestialBodyInfo[] = [
     orbitalParams: {
       semiMajorAxis: 17.834 * SOLAR_SYSTEM_SCALE_FACTOR, // a
       eccentricity: 0.967, // e
-      // semiMinorAxis b = a * sqrt(1 - e^2)
       semiMinorAxis: (17.834 * SOLAR_SYSTEM_SCALE_FACTOR) * Math.sqrt(1 - 0.967**2),
-      inclination: 162.26 * (Math.PI / 180), // Radians, retrograde
+      inclination: 162.26 * (Math.PI / 180), 
       perihelionDistance: 0.586 * SOLAR_SYSTEM_SCALE_FACTOR,
       aphelionDistance: 35.082 * SOLAR_SYSTEM_SCALE_FACTOR,
-      // Ellipse center X, if Sun (focus) is at origin and perihelion on +X side of Sun.
-      // Center X = a - p. Or more robustly: c = a*e. Place center at (-c,0) so focus (Sun) is at origin (0,0)
-      // and perihelion is at (a-c, 0)
       ellipseCX: -(17.834 * SOLAR_SYSTEM_SCALE_FACTOR * 0.967),
       orbitalPeriodYears: 76,
     }
@@ -82,7 +78,7 @@ export function GalaxyMap() {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   
-  const planetsRef = useRef<THREE.Mesh[]>([]); // For regular planets
+  const planetsRef = useRef<THREE.Mesh[]>([]);
   const asteroidsGroupRef = useRef<THREE.Group | null>(null);
   
   const cometMeshRef = useRef<THREE.Mesh | null>(null);
@@ -90,6 +86,11 @@ export function GalaxyMap() {
   const cometGroupRef = useRef<THREE.Group | null>(null);
 
   const clockRef = useRef<THREE.Clock | null>(null);
+
+  // Refs for shared asteroid resources to dispose
+  const asteroidGeometryRef = useRef<THREE.DodecahedronGeometry | null>(null);
+  const asteroidTextureRef = useRef<THREE.Texture | null>(null);
+  const asteroidMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null);
 
 
   useEffect(() => {
@@ -117,8 +118,8 @@ export function GalaxyMap() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 1; // Allow closer zoom for comet
-    controls.maxDistance = 1000; // Increased for comet's aphelion
+    controls.minDistance = 1;
+    controls.maxDistance = 1000;
     controlsRef.current = controls;
     
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); 
@@ -155,32 +156,31 @@ export function GalaxyMap() {
           roughness: 0.8,
         });
         const cometMesh = new THREE.Mesh(cometNucleusGeo, cometNucleusMat);
-        cometMesh.userData = { ...bodyData, currentU: 0 }; // Store full data and animation state
+        cometMesh.userData = { ...bodyData, currentU: 0 };
         cometMesh.name = bodyData.name;
         cometMeshRef.current = cometMesh;
 
         const curve = new THREE.EllipseCurve(
-          cometParams.ellipseCX, 0, // Center X, Y (Sun at focus 0,0 means center is offset by c)
-          cometParams.semiMajorAxis, cometParams.semiMinorAxis, // xRadius (a), yRadius (b)
-          0, 2 * Math.PI, false, 0 // aStartAngle, aEndAngle, aClockwise, aRotation (in-plane)
+          cometParams.ellipseCX, 0, 
+          cometParams.semiMajorAxis, cometParams.semiMinorAxis,
+          0, 2 * Math.PI, false, 0
         );
         cometOrbitCurveRef.current = curve;
         
-        const points = curve.getPoints(256); // Get Vector2 points
-        const orbitPoints3D = points.map(p => new THREE.Vector3(p.x, p.y, 0)); // Convert to Vector3 for XY plane initially
+        const points = curve.getPoints(256);
+        const orbitPoints3D = points.map(p => new THREE.Vector3(p.x, p.y, 0));
         const orbitGeom = new THREE.BufferGeometry().setFromPoints(orbitPoints3D);
         const orbitMat = new THREE.LineBasicMaterial({ color: bodyData.color, transparent: true, opacity: 0.3 });
         const cometOrbitLine = new THREE.Line(orbitGeom, orbitMat);
 
         const group = new THREE.Group();
-        group.add(cometMesh); // Comet mesh position will be local to this group
+        group.add(cometMesh);
         group.add(cometOrbitLine);
-        group.rotation.x = cometParams.inclination; // Apply inclination to the whole orbit system
-        // Additional rotations for longitude of ascending node & argument of periapsis would go here if needed.
+        group.rotation.x = cometParams.inclination;
         scene.add(group);
         cometGroupRef.current = group;
 
-      } else { // Stars and Planets
+      } else { 
         const geometry = new THREE.SphereGeometry(bodyData.size, 32, 32);
         const bodyTexture = textureLoader.load(bodyData.textureUrl);
         let material;
@@ -229,11 +229,18 @@ export function GalaxyMap() {
 
     const asteroids = new THREE.Group();
     asteroidsGroupRef.current = asteroids;
-    const asteroidGeometry = new THREE.DodecahedronGeometry(1, 0); 
-    const asteroidMaterial = new THREE.MeshStandardMaterial({ color: 0x6c5f5b, roughness: 0.9, metalness: 0.1 });
+    asteroidGeometryRef.current = new THREE.DodecahedronGeometry(1, 0); // Shared geometry for asteroids
+    asteroidTextureRef.current = textureLoader.load('https://placehold.co/128x128/A9A9A9/696969.png?text=Rock'); // data-ai-hint="asteroid texture"
+    asteroidMaterialRef.current = new THREE.MeshStandardMaterial({ 
+        map: asteroidTextureRef.current, 
+        roughness: 0.9, 
+        metalness: 0.1 
+    });
+
     for (let i = 0; i < ASTEROID_COUNT; i++) {
-      const asteroidMesh = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
-      const size = Math.random() * 0.12 + 0.03; 
+      if (!asteroidGeometryRef.current || !asteroidMaterialRef.current) continue;
+      const asteroidMesh = new THREE.Mesh(asteroidGeometryRef.current, asteroidMaterialRef.current);
+      const size = Math.random() * 0.3 + 0.08; // Increased size for asteroids
       asteroidMesh.scale.set(size, size, size * (Math.random() * 0.5 + 0.75)); 
       const radius = ASTEROID_BELT_INNER_RADIUS + Math.random() * (ASTEROID_BELT_OUTER_RADIUS - ASTEROID_BELT_INNER_RADIUS);
       const angle = Math.random() * Math.PI * 2;
@@ -255,16 +262,14 @@ export function GalaxyMap() {
       mouse.x = ((event.clientX - rect.left) / currentMount.clientWidth) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / currentMount.clientHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
-      // Include cometMeshRef in intersectable objects if it exists
       const intersectableObjects = scene.children.filter(obj => obj.userData.name && obj instanceof THREE.Mesh || (obj instanceof THREE.Group && obj === cometGroupRef.current));
       const intersects = raycaster.intersectObjects(intersectableObjects, true); 
       
       if (intersects.length > 0) {
         let clickedObjectOrGroup = intersects[0].object;
-        // Traverse up to find the main celestial body or comet group
         while (clickedObjectOrGroup.parent && clickedObjectOrGroup.parent !== scene && !clickedObjectOrGroup.userData.name) {
             if (clickedObjectOrGroup.parent === cometGroupRef.current && cometMeshRef.current) {
-                 clickedObjectOrGroup = cometMeshRef.current; // Select the comet mesh itself for its data
+                 clickedObjectOrGroup = cometMeshRef.current;
                  break;
             }
             clickedObjectOrGroup = clickedObjectOrGroup.parent as THREE.Object3D;
@@ -306,7 +311,7 @@ export function GalaxyMap() {
           if (asteroid instanceof THREE.Mesh) {
             const P = asteroid.userData;
             if (P.orbitalSpeed && P.orbitalRadius !== undefined && P.orbitalAngle !== undefined) {
-              const currentAngle = P.orbitalAngle + elapsedTime * P.orbitalSpeed; // Use elapsedTime for consistent movement
+              const currentAngle = P.orbitalAngle + elapsedTime * P.orbitalSpeed;
               asteroid.position.x = Math.cos(currentAngle) * P.orbitalRadius;
               asteroid.position.z = Math.sin(currentAngle) * P.orbitalRadius;
               if (P.rotationSpeed) {
@@ -319,31 +324,28 @@ export function GalaxyMap() {
         });
       }
       
-      // Animate Halley's Comet
       if (cometMeshRef.current && cometOrbitCurveRef.current && cometMeshRef.current.userData.orbitalParams) {
         const cometMesh = cometMeshRef.current;
         const cometData = cometMesh.userData as CelestialBodyInfo & { currentU: number };
         const params = cometData.orbitalParams!;
         
-        const sunPosition = new THREE.Vector3(0,0,0); // Sun is at origin
-        // Get comet's world position for distance calculation
+        const sunPosition = new THREE.Vector3(0,0,0);
         const cometWorldPosition = new THREE.Vector3();
         cometMesh.getWorldPosition(cometWorldPosition);
         const distanceToSun = cometWorldPosition.distanceTo(sunPosition);
 
-        const minSpeedFactor = 0.0005 / (params.orbitalPeriodYears / 76) ; // Base speed at aphelion
-        const maxSpeedFactor = 0.1 / (params.orbitalPeriodYears / 76);    // Base speed at perihelion
+        const minSpeedFactor = 0.0005 / (params.orbitalPeriodYears / 76) ;
+        const maxSpeedFactor = 0.1 / (params.orbitalPeriodYears / 76);
 
         let speedFactor;
-        if (distanceToSun <= params.perihelionDistance * 1.1) { // Add some buffer
+        if (distanceToSun <= params.perihelionDistance * 1.1) {
             speedFactor = maxSpeedFactor;
         } else if (distanceToSun >= params.aphelionDistance * 0.9) {
             speedFactor = minSpeedFactor;
         } else {
-            // Simple inverse relationship for speed: further = slower
-            const normalizedDistance = (distanceToSun - params.perihelionDistance) / (params.aphelionDistance - params.perihelionDistance); // 0 (peri) to 1 (aph)
+            const normalizedDistance = (distanceToSun - params.perihelionDistance) / (params.aphelionDistance - params.perihelionDistance);
             speedFactor = maxSpeedFactor - (normalizedDistance * (maxSpeedFactor - minSpeedFactor));
-            speedFactor = Math.max(minSpeedFactor, speedFactor); // clamp
+            speedFactor = Math.max(minSpeedFactor, speedFactor);
         }
         
         cometData.currentU += speedFactor * deltaTime;
@@ -352,10 +354,9 @@ export function GalaxyMap() {
         }
         
         const localPositionOnEllipse = cometOrbitCurveRef.current.getPoint(cometData.currentU);
-        cometMesh.position.set(localPositionOnEllipse.x, localPositionOnEllipse.y, 0); // Set local position within the rotated group
-        cometMesh.rotation.y += 0.005; // Slow rotation
+        cometMesh.position.set(localPositionOnEllipse.x, localPositionOnEllipse.y, 0);
+        cometMesh.rotation.y += 0.005;
       }
-
 
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     };
@@ -379,14 +380,22 @@ export function GalaxyMap() {
       if (controlsRef.current) controlsRef.current.dispose();
 
       if (asteroidsGroupRef.current && sceneRef.current) {
-        asteroidsGroupRef.current.children.forEach(child => { /* ... existing dispose ... */ });
-        sceneRef.current.remove(asteroidsGroupRef.current);
+        sceneRef.current.remove(asteroidsGroupRef.current); // Group removal handles meshes
         asteroidsGroupRef.current = null;
       }
-      asteroidGeometry.dispose(); // Shared geometry
-      asteroidMaterial.dispose(); // Shared material
-
-      // Dispose comet resources
+      if (asteroidGeometryRef.current) {
+        asteroidGeometryRef.current.dispose();
+        asteroidGeometryRef.current = null;
+      }
+      if (asteroidMaterialRef.current) {
+        asteroidMaterialRef.current.dispose();
+        asteroidMaterialRef.current = null;
+      }
+      if (asteroidTextureRef.current) {
+        asteroidTextureRef.current.dispose();
+        asteroidTextureRef.current = null;
+      }
+      
       if (cometGroupRef.current && sceneRef.current) {
         cometGroupRef.current.traverse(object => {
           if (object instanceof THREE.Mesh) {
@@ -409,7 +418,22 @@ export function GalaxyMap() {
 
 
       if (sceneRef.current) {
-        sceneRef.current.traverse(object => { /* ... existing dispose ... */ });
+        sceneRef.current.traverse(object => {
+           if (object instanceof THREE.Mesh) {
+                object.geometry.dispose();
+                if (Array.isArray(object.material)) {
+                    object.material.forEach(material => material.dispose());
+                } else {
+                    (object.material as THREE.Material).dispose();
+                }
+            } else if (object instanceof THREE.Line) {
+                 object.geometry.dispose();
+                (object.material as THREE.Material).dispose();
+            } else if (object instanceof THREE.Points) {
+                object.geometry.dispose();
+                (object.material as THREE.Material).dispose();
+            }
+        });
       }
       planetsRef.current = [];
     };
@@ -478,3 +502,4 @@ export function GalaxyMap() {
     </div>
   );
 }
+
