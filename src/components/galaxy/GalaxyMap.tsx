@@ -16,23 +16,25 @@ interface CelestialBodyInfo {
   resources: string[];
   terrain: string;
   biome: string;
-  color: number;
+  color: number; // Used for emissive stars or as a fallback tint
   size: number;
   position: [number, number, number]; // Initial position
   textureUrl: string;
   orbitalSpeed?: number; // Radians per unit of time (relative for simulation)
+  dataAiHint?: string;
+  ringTextureUrl?: string; // Optional for planets with rings
 }
 
 const solarSystemData: CelestialBodyInfo[] = [
-  { name: 'Sun', type: 'Star', gravity: '274.0 m/s²', resources: ['Helium', 'Hydrogen'], terrain: 'Plasma', biome: 'Star', color: 0xFFD700, size: 4.0, position: [0,0,0], textureUrl: 'https://placehold.co/256x256/FFD700/000000.png?text=Sun' },
-  { name: 'Mercury', type: 'Planet', gravity: '0.38 G', resources: ['Iron', 'Nickel'], terrain: 'Cratered', biome: 'Rocky', color: 0x8C8C8C, size: 0.5, position: [8, 0, 0], textureUrl: 'https://placehold.co/256x256/8C8C8C/FFFFFF.png?text=Mercury', orbitalSpeed: 0.47 },
-  { name: 'Venus', type: 'Planet', gravity: '0.91 G', resources: ['Sulfuric Acid', 'CO2'], terrain: 'Volcanic Plains', biome: 'Hot House', color: 0xE6D2A8, size: 0.9, position: [14, 0, 0], textureUrl: 'https://placehold.co/256x256/E6D2A8/000000.png?text=Venus', orbitalSpeed: 0.35 },
-  { name: 'Earth', type: 'Planet', gravity: '1.0 G', resources: ['Water', 'Oxygen', 'Life'], terrain: 'Varied', biome: 'Temperate', color: 0x6B93D6, size: 1.0, position: [20, 0, 0], textureUrl: 'https://placehold.co/256x256/6B93D6/FFFFFF.png?text=Earth', orbitalSpeed: 0.29 },
-  { name: 'Mars', type: 'Planet', gravity: '0.38 G', resources: ['Iron Oxide', 'Water Ice'], terrain: 'Canyons, Deserts', biome: 'Cold Desert', color: 0xD97C57, size: 0.7, position: [28, 0, 0], textureUrl: 'https://placehold.co/256x256/D97C57/FFFFFF.png?text=Mars', orbitalSpeed: 0.24 },
-  { name: 'Jupiter', type: 'Planet', gravity: '2.53 G', resources: ['Hydrogen', 'Helium'], terrain: 'Gas Layers', biome: 'Gas Giant', color: 0xC9A78A, size: 2.8, position: [45, 0, 0], textureUrl: 'https://placehold.co/256x256/C9A78A/FFFFFF.png?text=Jupiter', orbitalSpeed: 0.13 },
-  { name: 'Saturn', type: 'Planet', gravity: '1.07 G', resources: ['Hydrogen', 'Helium', 'Ice'], terrain: 'Gas Layers, Rings', biome: 'Gas Giant', color: 0xF0E6C6, size: 2.4, position: [65, 0, 0], textureUrl: 'https://placehold.co/256x256/F0E6C6/000000.png?text=Saturn', orbitalSpeed: 0.09 },
-  { name: 'Uranus', type: 'Planet', gravity: '0.9 G', resources: ['Methane', 'Ammonia', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0xAEEEEE, size: 1.8, position: [85, 0, 0], textureUrl: 'https://placehold.co/256x256/AEEEEE/000000.png?text=Uranus', orbitalSpeed: 0.06 },
-  { name: 'Neptune', type: 'Planet', gravity: '1.14 G', resources: ['Methane', 'Hydrogen', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0x3A7CEC, size: 1.7, position: [100, 0, 0], textureUrl: 'https://placehold.co/256x256/3A7CEC/FFFFFF.png?text=Neptune', orbitalSpeed: 0.05 },
+  { name: 'Sun', type: 'Star', gravity: '274.0 m/s²', resources: ['Helium', 'Hydrogen'], terrain: 'Plasma', biome: 'Star', color: 0xFFD700, size: 4.0, position: [0,0,0], textureUrl: 'https://placehold.co/256x256/FFD700/000000.png?text=Sun', dataAiHint: 'star texture' },
+  { name: 'Mercury', type: 'Planet', gravity: '0.38 G', resources: ['Iron', 'Nickel'], terrain: 'Cratered', biome: 'Rocky', color: 0x8C8C8C, size: 0.5, position: [8, 0, 0], textureUrl: 'https://placehold.co/256x256/A0A0A0/333333.png?text=Mercury', orbitalSpeed: 0.47, dataAiHint: 'planet texture rocky' },
+  { name: 'Venus', type: 'Planet', gravity: '0.91 G', resources: ['Sulfuric Acid', 'CO2'], terrain: 'Volcanic Plains', biome: 'Hot House', color: 0xE6D2A8, size: 0.9, position: [14, 0, 0], textureUrl: 'https://placehold.co/256x256/E6D2A9/6B4F34.png?text=Venus', orbitalSpeed: 0.35, dataAiHint: 'planet texture cloudy' },
+  { name: 'Earth', type: 'Planet', gravity: '1.0 G', resources: ['Water', 'Oxygen', 'Life'], terrain: 'Varied', biome: 'Temperate', color: 0x6B93D6, size: 1.0, position: [20, 0, 0], textureUrl: 'https://placehold.co/256x256/6B93D6/1F5C2F.png?text=Earth', orbitalSpeed: 0.29, dataAiHint: 'planet texture earth-like' },
+  { name: 'Mars', type: 'Planet', gravity: '0.38 G', resources: ['Iron Oxide', 'Water Ice'], terrain: 'Canyons, Deserts', biome: 'Cold Desert', color: 0xD97C57, size: 0.7, position: [28, 0, 0], textureUrl: 'https://placehold.co/256x256/D97C57/80381F.png?text=Mars', orbitalSpeed: 0.24, dataAiHint: 'planet texture mars' },
+  { name: 'Jupiter', type: 'Planet', gravity: '2.53 G', resources: ['Hydrogen', 'Helium'], terrain: 'Gas Layers', biome: 'Gas Giant', color: 0xC9A78A, size: 2.8, position: [45, 0, 0], textureUrl: 'https://placehold.co/256x256/C9A78A/835F43.png?text=Jupiter', orbitalSpeed: 0.13, dataAiHint: 'planet texture jupiter' },
+  { name: 'Saturn', type: 'Planet', gravity: '1.07 G', resources: ['Hydrogen', 'Helium', 'Ice'], terrain: 'Gas Layers, Rings', biome: 'Gas Giant', color: 0xF0E6C6, size: 2.4, position: [65, 0, 0], textureUrl: 'https://placehold.co/256x256/F0E6C6/736A50.png?text=Saturn', orbitalSpeed: 0.09, dataAiHint: 'planet texture saturn', ringTextureUrl: 'https://placehold.co/512x64/D3CBB6/A9A086.png?text=Rings' },
+  { name: 'Uranus', type: 'Planet', gravity: '0.9 G', resources: ['Methane', 'Ammonia', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0xAEEEEE, size: 1.8, position: [85, 0, 0], textureUrl: 'https://placehold.co/256x256/AEEEEE/45B3B3.png?text=Uranus', orbitalSpeed: 0.06, dataAiHint: 'planet texture uranus' },
+  { name: 'Neptune', type: 'Planet', gravity: '1.14 G', resources: ['Methane', 'Hydrogen', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0x3A7CEC, size: 1.7, position: [100, 0, 0], textureUrl: 'https://placehold.co/256x256/3A7CEC/2A588F.png?text=Neptune', orbitalSpeed: 0.05, dataAiHint: 'planet texture neptune' },
 ];
 
 
@@ -50,29 +52,24 @@ export function GalaxyMap() {
     if (!mountRef.current) return;
 
     const currentMount = mountRef.current;
-    planetsRef.current = []; // Clear previous planets if any
+    planetsRef.current = []; 
 
-    // Clock
     clockRef.current = new THREE.Clock();
 
-    // Scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
     scene.background = new THREE.Color(0x1A001A); 
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, 1000);
-    camera.position.set(0, 35, 50); // Adjusted camera for better view
+    camera.position.set(0, 35, 50); 
     cameraRef.current = camera;
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     currentMount.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -80,14 +77,12 @@ export function GalaxyMap() {
     controls.maxDistance = 250; 
     controlsRef.current = controls;
     
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); 
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
     scene.add(ambientLight);
-    const pointLight = new THREE.PointLight(0xffffff, 1.5, 1000); 
+    const pointLight = new THREE.PointLight(0xffffff, 2.5, 1200); 
     pointLight.position.set(0, 0, 0); 
     scene.add(pointLight);
 
-    // Stars background
     const starGeometry = new THREE.BufferGeometry();
     const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
     const starVertices = [];
@@ -103,23 +98,38 @@ export function GalaxyMap() {
     const stars = new THREE.Points(starGeometry, starMaterial);
     scene.add(stars);
     
-    // Celestial Bodies
     const textureLoader = new THREE.TextureLoader();
     solarSystemData.forEach(bodyData => {
       const geometry = new THREE.SphereGeometry(bodyData.size, 32, 32);
+      const bodyTexture = textureLoader.load(bodyData.textureUrl);
       let material;
-      const texture = textureLoader.load(bodyData.textureUrl);
 
       if (bodyData.type === 'Star') { 
-        material = new THREE.MeshBasicMaterial({ map: texture, emissive: bodyData.color, emissiveIntensity: 1 });
+        material = new THREE.MeshBasicMaterial({ map: bodyTexture, emissive: bodyData.color, emissiveIntensity: 1.5 });
       } else { 
-        material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.8, metalness: 0.2 });
+        material = new THREE.MeshStandardMaterial({ map: bodyTexture, roughness: 0.8, metalness: 0.1 });
       }
       const bodyMesh = new THREE.Mesh(geometry, material);
       bodyMesh.position.set(...bodyData.position);
-      bodyMesh.userData = { ...bodyData }; // Store all data for click events and animation
+      bodyMesh.userData = { ...bodyData };
       bodyMesh.name = bodyData.name; 
       scene.add(bodyMesh);
+
+      // Add rings for Saturn
+      if (bodyData.name === 'Saturn' && bodyData.ringTextureUrl) {
+        const ringTexture = textureLoader.load(bodyData.ringTextureUrl);
+        const ringGeometry = new THREE.RingGeometry(bodyData.size * 1.2, bodyData.size * 2.2, 64);
+        const ringMaterial = new THREE.MeshBasicMaterial({ 
+          map: ringTexture, 
+          side: THREE.DoubleSide, 
+          transparent: true, 
+          opacity: 0.7 
+        });
+        const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+        ringMesh.rotation.x = Math.PI * 0.45; // Tilt the rings
+        ringMesh.userData.dataAiHint = "planet rings"; // For potential future use
+        bodyMesh.add(ringMesh); // Add rings as a child of Saturn
+      }
 
       if (bodyData.type === 'Planet' && bodyData.orbitalSpeed) {
         bodyMesh.userData.orbitalRadius = Math.sqrt(bodyData.position[0]**2 + bodyData.position[2]**2);
@@ -127,19 +137,20 @@ export function GalaxyMap() {
         bodyMesh.userData.initialAngle = Math.atan2(bodyData.position[2], bodyData.position[0]);
         planetsRef.current.push(bodyMesh);
 
-        // Basic orbit lines for planets
         const orbitRadius = bodyMesh.userData.orbitalRadius;
-        const orbitGeometry = new THREE.RingGeometry(orbitRadius - 0.05, orbitRadius + 0.05, 128);
-        // make orbit lines semi-transparent white
-        const orbitMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.2, transparent: true, side: THREE.DoubleSide });
-        const orbitMesh = new THREE.Mesh(orbitGeometry, orbitMaterial);
-        orbitMesh.rotation.x = Math.PI / 2; 
-        orbitMesh.position.set(0, bodyData.position[1], 0); 
-        scene.add(orbitMesh);
+        const orbitPoints = [];
+        const segments = 128;
+        for (let i = 0; i <= segments; i++) {
+            const theta = (i / segments) * Math.PI * 2;
+            orbitPoints.push(new THREE.Vector3(Math.cos(theta) * orbitRadius, bodyData.position[1], Math.sin(theta) * orbitRadius));
+        }
+        const orbitLineGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+        const orbitLineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
+        const orbitLine = new THREE.Line(orbitLineGeometry, orbitLineMaterial);
+        scene.add(orbitLine);
       }
     });
 
-    // Raycaster for interaction
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -149,14 +160,21 @@ export function GalaxyMap() {
       mouse.x = ((event.clientX - rect.left) / currentMount.clientWidth) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / currentMount.clientHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(scene.children.filter(obj => obj.userData.name)); 
+      const intersects = raycaster.intersectObjects(scene.children.filter(obj => obj.userData.name && obj instanceof THREE.Mesh), true); 
+      
       if (intersects.length > 0) {
-        setSelectedBody(intersects[0].object.userData as CelestialBodyInfo);
+        let clickedObject = intersects[0].object;
+        // If rings are clicked, get the parent (Saturn)
+        if (clickedObject.parent && clickedObject.parent.userData.name === 'Saturn') {
+          clickedObject = clickedObject.parent;
+        }
+        if (clickedObject.userData.name) {
+           setSelectedBody(clickedObject.userData as CelestialBodyInfo);
+        }
       }
     };
     currentMount.addEventListener('click', onClick);
 
-    // Animation loop
     const animate = () => {
       if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !controlsRef.current || !clockRef.current) return;
       requestAnimationFrame(animate);
@@ -165,18 +183,18 @@ export function GalaxyMap() {
 
       controlsRef.current.update();
       
-      // Axial rotation for planets and Sun
       sceneRef.current.children.forEach(obj => {
-        if(obj.userData.name) { 
-          obj.rotation.y += 0.002; // All bodies rotate on their axis
+        if(obj.userData.name && obj instanceof THREE.Mesh) { 
+          obj.rotation.y += 0.002; 
+          // If it's Saturn, its rings (children) will rotate with it.
+          // If specific ring rotation is desired independent of planet body, it can be added here.
         }
       });
 
-      // Animate planet orbits
       planetsRef.current.forEach(planet => {
         const P = planet.userData;
         if (P.orbitalSpeed && P.orbitalRadius !== undefined && P.initialAngle !== undefined) {
-          const currentAngle = P.initialAngle + elapsedTime * P.orbitalSpeed * 0.1; // Scale speed for visibility
+          const currentAngle = P.initialAngle + elapsedTime * P.orbitalSpeed * 0.1; 
           planet.position.x = Math.cos(currentAngle) * P.orbitalRadius;
           planet.position.y = P.initialY; 
           planet.position.z = Math.sin(currentAngle) * P.orbitalRadius;
@@ -187,7 +205,6 @@ export function GalaxyMap() {
     };
     animate();
 
-    // Handle resize
     const handleResize = () => {
       if (!currentMount || !rendererRef.current || !cameraRef.current) return;
       cameraRef.current.aspect = currentMount.clientWidth / currentMount.clientHeight;
@@ -210,8 +227,16 @@ export function GalaxyMap() {
             object.geometry.dispose();
             if (Array.isArray(object.material)) {
               object.material.forEach(material => material.dispose());
-            } else if (object.material) {
-              object.material.dispose();
+            } else if (object.material && typeof (object.material as any).dispose === 'function') {
+              (object.material as any).dispose();
+            }
+          }
+           if (object instanceof THREE.Line) {
+            object.geometry.dispose();
+            if (Array.isArray(object.material)) {
+              object.material.forEach(material => material.dispose());
+            } else if (object.material && typeof (object.material as any).dispose === 'function') {
+               (object.material as any).dispose();
             }
           }
         });
@@ -238,7 +263,7 @@ export function GalaxyMap() {
 
   return (
     <div className="relative w-full h-[calc(100vh-10rem)] rounded-lg overflow-hidden border border-primary/30 shadow-2xl shadow-primary/20">
-      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system space planets orbit" />
+      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets orbit" />
       <div className="absolute top-4 right-4 flex flex-col gap-2">
         <Button size="icon" onClick={() => zoom(1.2)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomInIcon className="w-5 h-5" /></Button>
         <Button size="icon" onClick={() => zoom(0.8)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomOutIcon className="w-5 h-5" /></Button>
@@ -251,7 +276,7 @@ export function GalaxyMap() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 100 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="absolute top-4 left-4 w-full max-w-xs"
+            className="absolute top-4 left-4 w-full max-w-xs z-10" // Added z-index
           >
             <Card className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
