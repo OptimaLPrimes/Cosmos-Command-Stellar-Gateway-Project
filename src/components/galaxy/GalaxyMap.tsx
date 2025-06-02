@@ -9,21 +9,35 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { XIcon, ZoomInIcon, ZoomOutIcon, RotateCcwIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface OrbitalParams {
+  semiMajorAxis: number;
+  semiMinorAxis: number;
+  eccentricity: number;
+  inclination: number; // radians
+  perihelionDistance: number;
+  aphelionDistance: number;
+  ellipseCX: number; // X-coordinate of the ellipse center relative to the focus (Sun)
+  orbitalPeriodYears: number; // For display and conceptual animation speed
+}
+
 interface CelestialBodyInfo {
   name: string;
-  type: 'Star' | 'Planet';
+  type: 'Star' | 'Planet' | 'Comet';
   gravity: string;
   resources: string[];
   terrain: string;
   biome: string;
-  color: number; // Used for emissive stars or as a fallback tint
+  color: number;
   size: number;
-  position: [number, number, number]; // Initial position
+  position: [number, number, number]; // Initial position for planets, not used for comet's dynamic path
   textureUrl: string;
-  orbitalSpeed?: number; // Radians per unit of time (relative for simulation)
   dataAiHint?: string;
-  ringTextureUrl?: string; // Optional for planets with rings
+  orbitalSpeed?: number; // For planets
+  ringTextureUrl?: string;
+  orbitalParams?: OrbitalParams; // For comets or other complex orbits
 }
+
+const SOLAR_SYSTEM_SCALE_FACTOR = 20; // 1 AU = 20 units in the scene
 
 const solarSystemData: CelestialBodyInfo[] = [
   { name: 'Sun', type: 'Star', gravity: '274.0 m/s²', resources: ['Helium', 'Hydrogen'], terrain: 'Plasma', biome: 'Star', color: 0xFFD700, size: 4.0, position: [0,0,0], textureUrl: 'https://placehold.co/256x256/FFD700/000000.png?text=Sun', dataAiHint: 'star texture' },
@@ -35,12 +49,30 @@ const solarSystemData: CelestialBodyInfo[] = [
   { name: 'Saturn', type: 'Planet', gravity: '1.07 G', resources: ['Hydrogen', 'Helium', 'Ice'], terrain: 'Gas Layers, Rings', biome: 'Gas Giant', color: 0xF0E6C6, size: 2.4, position: [65, 0, 0], textureUrl: 'https://placehold.co/256x256/F0E6C6/736A50.png?text=Saturn', orbitalSpeed: 0.09, dataAiHint: 'planet texture saturn', ringTextureUrl: 'https://placehold.co/512x64/D3CBB6/A9A086.png?text=Rings' },
   { name: 'Uranus', type: 'Planet', gravity: '0.9 G', resources: ['Methane', 'Ammonia', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0xAEEEEE, size: 1.8, position: [85, 0, 0], textureUrl: 'https://placehold.co/256x256/AEEEEE/45B3B3.png?text=Uranus', orbitalSpeed: 0.06, dataAiHint: 'planet texture uranus' },
   { name: 'Neptune', type: 'Planet', gravity: '1.14 G', resources: ['Methane', 'Hydrogen', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0x3A7CEC, size: 1.7, position: [100, 0, 0], textureUrl: 'https://placehold.co/256x256/3A7CEC/2A588F.png?text=Neptune', orbitalSpeed: 0.05, dataAiHint: 'planet texture neptune' },
+  {
+    name: "Halley's Comet", type: 'Comet', gravity: 'Negligible', resources: ['Water Ice', 'Dust'], terrain: 'Icy Nucleus', biome: 'Cometary Coma (active)', color: 0xE0FFFF, size: 0.15, position: [0,0,0], // Dynamic
+    textureUrl: 'https://placehold.co/128x128/E0FFFF/666666.png?text=Halley', dataAiHint: 'comet icy rock',
+    orbitalParams: {
+      semiMajorAxis: 17.834 * SOLAR_SYSTEM_SCALE_FACTOR, // a
+      eccentricity: 0.967, // e
+      // semiMinorAxis b = a * sqrt(1 - e^2)
+      semiMinorAxis: (17.834 * SOLAR_SYSTEM_SCALE_FACTOR) * Math.sqrt(1 - 0.967**2),
+      inclination: 162.26 * (Math.PI / 180), // Radians, retrograde
+      perihelionDistance: 0.586 * SOLAR_SYSTEM_SCALE_FACTOR,
+      aphelionDistance: 35.082 * SOLAR_SYSTEM_SCALE_FACTOR,
+      // Ellipse center X, if Sun (focus) is at origin and perihelion on +X side of Sun.
+      // Center X = a - p. Or more robustly: c = a*e. Place center at (-c,0) so focus (Sun) is at origin (0,0)
+      // and perihelion is at (a-c, 0)
+      ellipseCX: -(17.834 * SOLAR_SYSTEM_SCALE_FACTOR * 0.967),
+      orbitalPeriodYears: 76,
+    }
+  }
 ];
 
 const ASTEROID_COUNT = 300;
-const ASTEROID_BELT_INNER_RADIUS = 33; // Between Mars (28) and Jupiter (45)
+const ASTEROID_BELT_INNER_RADIUS = 33;
 const ASTEROID_BELT_OUTER_RADIUS = 42;
-const ASTEROID_BELT_THICKNESS = 1.5; // Vertical spread of the belt
+const ASTEROID_BELT_THICKNESS = 1.5;
 
 export function GalaxyMap() {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -49,9 +81,15 @@ export function GalaxyMap() {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
-  const planetsRef = useRef<THREE.Mesh[]>([]);
-  const clockRef = useRef<THREE.Clock | null>(null);
+  
+  const planetsRef = useRef<THREE.Mesh[]>([]); // For regular planets
   const asteroidsGroupRef = useRef<THREE.Group | null>(null);
+  
+  const cometMeshRef = useRef<THREE.Mesh | null>(null);
+  const cometOrbitCurveRef = useRef<THREE.EllipseCurve | null>(null);
+  const cometGroupRef = useRef<THREE.Group | null>(null);
+
+  const clockRef = useRef<THREE.Clock | null>(null);
 
 
   useEffect(() => {
@@ -64,10 +102,10 @@ export function GalaxyMap() {
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x0A000A); // Slightly darker background
+    scene.background = new THREE.Color(0x0A000A); 
 
-    const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, 2000); // Increased far plane
-    camera.position.set(0, 45, 60);  // Adjusted camera position
+    const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, 2000);
+    camera.position.set(0, 45, 60); 
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -79,8 +117,8 @@ export function GalaxyMap() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 5;
-    controls.maxDistance = 300; // Increased max distance
+    controls.minDistance = 1; // Allow closer zoom for comet
+    controls.maxDistance = 1000; // Increased for comet's aphelion
     controlsRef.current = controls;
     
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); 
@@ -90,10 +128,10 @@ export function GalaxyMap() {
     scene.add(pointLight);
 
     const starGeometry = new THREE.BufferGeometry();
-    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, sizeAttenuation: true }); // Adjusted star size
+    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, sizeAttenuation: true });
     const starVertices = [];
-    for (let i = 0; i < 15000; i++) { // More stars
-      const x = (Math.random() - 0.5) * 2500; // Wider spread
+    for (let i = 0; i < 15000; i++) {
+      const x = (Math.random() - 0.5) * 2500;
       const y = (Math.random() - 0.5) * 2500;
       const z = (Math.random() - 0.5) * 2500;
       if (Math.sqrt(x*x + y*y + z*z) > 200) { 
@@ -105,113 +143,134 @@ export function GalaxyMap() {
     scene.add(stars);
     
     const textureLoader = new THREE.TextureLoader();
+
     solarSystemData.forEach(bodyData => {
-      const geometry = new THREE.SphereGeometry(bodyData.size, 32, 32);
-      const bodyTexture = textureLoader.load(bodyData.textureUrl);
-      let material;
-
-      if (bodyData.type === 'Star') { 
-        material = new THREE.MeshBasicMaterial({ map: bodyTexture, emissive: bodyData.color, emissiveIntensity: 1.5 });
-      } else { 
-        material = new THREE.MeshStandardMaterial({ map: bodyTexture, roughness: 0.8, metalness: 0.1 });
-      }
-      const bodyMesh = new THREE.Mesh(geometry, material);
-      bodyMesh.position.set(...bodyData.position);
-      bodyMesh.userData = { ...bodyData };
-      bodyMesh.name = bodyData.name; 
-      scene.add(bodyMesh);
-
-      if (bodyData.name === 'Saturn' && bodyData.ringTextureUrl) {
-        const ringTexture = textureLoader.load(bodyData.ringTextureUrl);
-        const ringGeometry = new THREE.RingGeometry(bodyData.size * 1.2, bodyData.size * 2.2, 64);
-        const ringMaterial = new THREE.MeshBasicMaterial({ 
-          map: ringTexture, 
-          side: THREE.DoubleSide, 
-          transparent: true, 
-          opacity: 0.7 
+      if (bodyData.type === 'Comet' && bodyData.orbitalParams) {
+        const cometParams = bodyData.orbitalParams;
+        const cometNucleusGeo = new THREE.SphereGeometry(bodyData.size, 16, 16);
+        const cometNucleusMat = new THREE.MeshStandardMaterial({
+          map: textureLoader.load(bodyData.textureUrl),
+          emissive: bodyData.color,
+          emissiveIntensity: 0.3,
+          roughness: 0.8,
         });
-        const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
-        ringMesh.rotation.x = Math.PI * 0.45; 
-        ringMesh.userData.dataAiHint = "planet rings"; 
-        bodyMesh.add(ringMesh); 
-      }
+        const cometMesh = new THREE.Mesh(cometNucleusGeo, cometNucleusMat);
+        cometMesh.userData = { ...bodyData, currentU: 0 }; // Store full data and animation state
+        cometMesh.name = bodyData.name;
+        cometMeshRef.current = cometMesh;
 
-      if (bodyData.type === 'Planet' && bodyData.orbitalSpeed) {
-        bodyMesh.userData.orbitalRadius = Math.sqrt(bodyData.position[0]**2 + bodyData.position[2]**2);
-        bodyMesh.userData.initialY = bodyData.position[1];
-        bodyMesh.userData.initialAngle = Math.atan2(bodyData.position[2], bodyData.position[0]);
-        planetsRef.current.push(bodyMesh);
+        const curve = new THREE.EllipseCurve(
+          cometParams.ellipseCX, 0, // Center X, Y (Sun at focus 0,0 means center is offset by c)
+          cometParams.semiMajorAxis, cometParams.semiMinorAxis, // xRadius (a), yRadius (b)
+          0, 2 * Math.PI, false, 0 // aStartAngle, aEndAngle, aClockwise, aRotation (in-plane)
+        );
+        cometOrbitCurveRef.current = curve;
+        
+        const points = curve.getPoints(256); // Get Vector2 points
+        const orbitPoints3D = points.map(p => new THREE.Vector3(p.x, p.y, 0)); // Convert to Vector3 for XY plane initially
+        const orbitGeom = new THREE.BufferGeometry().setFromPoints(orbitPoints3D);
+        const orbitMat = new THREE.LineBasicMaterial({ color: bodyData.color, transparent: true, opacity: 0.3 });
+        const cometOrbitLine = new THREE.Line(orbitGeom, orbitMat);
 
-        const orbitRadius = bodyMesh.userData.orbitalRadius;
-        const orbitPoints = [];
-        const segments = 128;
-        for (let i = 0; i <= segments; i++) {
-            const theta = (i / segments) * Math.PI * 2;
-            orbitPoints.push(new THREE.Vector3(Math.cos(theta) * orbitRadius, bodyData.position[1], Math.sin(theta) * orbitRadius));
+        const group = new THREE.Group();
+        group.add(cometMesh); // Comet mesh position will be local to this group
+        group.add(cometOrbitLine);
+        group.rotation.x = cometParams.inclination; // Apply inclination to the whole orbit system
+        // Additional rotations for longitude of ascending node & argument of periapsis would go here if needed.
+        scene.add(group);
+        cometGroupRef.current = group;
+
+      } else { // Stars and Planets
+        const geometry = new THREE.SphereGeometry(bodyData.size, 32, 32);
+        const bodyTexture = textureLoader.load(bodyData.textureUrl);
+        let material;
+
+        if (bodyData.type === 'Star') { 
+          material = new THREE.MeshBasicMaterial({ map: bodyTexture, emissive: bodyData.color, emissiveIntensity: 1.5 });
+        } else { 
+          material = new THREE.MeshStandardMaterial({ map: bodyTexture, roughness: 0.8, metalness: 0.1 });
         }
-        const orbitLineGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
-        const orbitLineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
-        const orbitLine = new THREE.Line(orbitLineGeometry, orbitLineMaterial);
-        scene.add(orbitLine);
+        const bodyMesh = new THREE.Mesh(geometry, material);
+        bodyMesh.position.set(...bodyData.position);
+        bodyMesh.userData = { ...bodyData };
+        bodyMesh.name = bodyData.name; 
+        scene.add(bodyMesh);
+
+        if (bodyData.name === 'Saturn' && bodyData.ringTextureUrl) {
+          const ringTexture = textureLoader.load(bodyData.ringTextureUrl);
+          const ringGeometry = new THREE.RingGeometry(bodyData.size * 1.2, bodyData.size * 2.2, 64);
+          const ringMaterial = new THREE.MeshBasicMaterial({ map: ringTexture, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
+          const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+          ringMesh.rotation.x = Math.PI * 0.45; 
+          ringMesh.userData.dataAiHint = "planet rings"; 
+          bodyMesh.add(ringMesh); 
+        }
+
+        if (bodyData.type === 'Planet' && bodyData.orbitalSpeed) {
+          bodyMesh.userData.orbitalRadius = Math.sqrt(bodyData.position[0]**2 + bodyData.position[2]**2);
+          bodyMesh.userData.initialY = bodyData.position[1];
+          bodyMesh.userData.initialAngle = Math.atan2(bodyData.position[2], bodyData.position[0]);
+          planetsRef.current.push(bodyMesh);
+
+          const orbitRadius = bodyMesh.userData.orbitalRadius;
+          const orbitPoints = [];
+          const segments = 128;
+          for (let i = 0; i <= segments; i++) {
+              const theta = (i / segments) * Math.PI * 2;
+              orbitPoints.push(new THREE.Vector3(Math.cos(theta) * orbitRadius, bodyData.position[1], Math.sin(theta) * orbitRadius));
+          }
+          const orbitLineGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+          const orbitLineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
+          const orbitLine = new THREE.Line(orbitLineGeometry, orbitLineMaterial);
+          scene.add(orbitLine);
+        }
       }
     });
 
-    // Asteroid Belt
     const asteroids = new THREE.Group();
     asteroidsGroupRef.current = asteroids;
-    const asteroidGeometry = new THREE.DodecahedronGeometry(1, 0); // Base geometry, 1 for radius, 0 for detail
-    const asteroidMaterial = new THREE.MeshStandardMaterial({
-      color: 0x6c5f5b, // Brownish-grey
-      roughness: 0.9,
-      metalness: 0.1,
-    });
-
+    const asteroidGeometry = new THREE.DodecahedronGeometry(1, 0); 
+    const asteroidMaterial = new THREE.MeshStandardMaterial({ color: 0x6c5f5b, roughness: 0.9, metalness: 0.1 });
     for (let i = 0; i < ASTEROID_COUNT; i++) {
       const asteroidMesh = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
-      const size = Math.random() * 0.12 + 0.03; // Asteroid size: 0.03 to 0.15
-      asteroidMesh.scale.set(size, size, size * (Math.random() * 0.5 + 0.75)); // Slightly irregular scaling
-
+      const size = Math.random() * 0.12 + 0.03; 
+      asteroidMesh.scale.set(size, size, size * (Math.random() * 0.5 + 0.75)); 
       const radius = ASTEROID_BELT_INNER_RADIUS + Math.random() * (ASTEROID_BELT_OUTER_RADIUS - ASTEROID_BELT_INNER_RADIUS);
       const angle = Math.random() * Math.PI * 2;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
       const y = (Math.random() - 0.5) * ASTEROID_BELT_THICKNESS;
-
       asteroidMesh.position.set(x, y, z);
       asteroidMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-
-      asteroidMesh.userData.orbitalRadius = radius;
-      asteroidMesh.userData.orbitalAngle = angle;
-      // Orbital speed: inversely proportional to radius (Kepler-ish), with some randomness, and slower than planets
-      asteroidMesh.userData.orbitalSpeed = (0.01 + Math.random() * 0.02) * (ASTEROID_BELT_OUTER_RADIUS / radius) * 0.5;
-      asteroidMesh.userData.rotationSpeed = new THREE.Vector3(
-        (Math.random() - 0.5) * 0.005,
-        (Math.random() - 0.5) * 0.005,
-        (Math.random() - 0.5) * 0.005
-      );
+      asteroidMesh.userData = { orbitalRadius: radius, orbitalAngle: angle, orbitalSpeed: (0.01 + Math.random() * 0.02) * (ASTEROID_BELT_OUTER_RADIUS / radius) * 0.5, rotationSpeed: new THREE.Vector3((Math.random() - 0.5) * 0.005, (Math.random() - 0.5) * 0.005, (Math.random() - 0.5) * 0.005) };
       asteroids.add(asteroidMesh);
     }
     scene.add(asteroids);
 
-
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-
     const onClick = (event: MouseEvent) => {
       if (!currentMount) return;
       const rect = currentMount.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / currentMount.clientWidth) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / currentMount.clientHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(scene.children.filter(obj => obj.userData.name && obj instanceof THREE.Mesh), true); 
+      // Include cometMeshRef in intersectable objects if it exists
+      const intersectableObjects = scene.children.filter(obj => obj.userData.name && obj instanceof THREE.Mesh || (obj instanceof THREE.Group && obj === cometGroupRef.current));
+      const intersects = raycaster.intersectObjects(intersectableObjects, true); 
       
       if (intersects.length > 0) {
-        let clickedObject = intersects[0].object;
-        if (clickedObject.parent && clickedObject.parent.userData.name === 'Saturn') {
-          clickedObject = clickedObject.parent;
+        let clickedObjectOrGroup = intersects[0].object;
+        // Traverse up to find the main celestial body or comet group
+        while (clickedObjectOrGroup.parent && clickedObjectOrGroup.parent !== scene && !clickedObjectOrGroup.userData.name) {
+            if (clickedObjectOrGroup.parent === cometGroupRef.current && cometMeshRef.current) {
+                 clickedObjectOrGroup = cometMeshRef.current; // Select the comet mesh itself for its data
+                 break;
+            }
+            clickedObjectOrGroup = clickedObjectOrGroup.parent as THREE.Object3D;
         }
-        if (clickedObject.userData.name) {
-           setSelectedBody(clickedObject.userData as CelestialBodyInfo);
+        if (clickedObjectOrGroup.userData.name) {
+           setSelectedBody(clickedObjectOrGroup.userData as CelestialBodyInfo);
         }
       }
     };
@@ -221,12 +280,13 @@ export function GalaxyMap() {
       if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !controlsRef.current || !clockRef.current) return;
       requestAnimationFrame(animate);
       
+      const deltaTime = clockRef.current.getDelta();
       const elapsedTime = clockRef.current.getElapsedTime();
 
       controlsRef.current.update();
       
       sceneRef.current.children.forEach(obj => {
-        if(obj.userData.name && obj instanceof THREE.Mesh) { 
+        if(obj.userData.name && obj instanceof THREE.Mesh && obj !== cometMeshRef.current) { 
           obj.rotation.y += 0.002; 
         }
       });
@@ -246,11 +306,9 @@ export function GalaxyMap() {
           if (asteroid instanceof THREE.Mesh) {
             const P = asteroid.userData;
             if (P.orbitalSpeed && P.orbitalRadius !== undefined && P.orbitalAngle !== undefined) {
-              const currentAngle = P.orbitalAngle + elapsedTime * P.orbitalSpeed;
+              const currentAngle = P.orbitalAngle + elapsedTime * P.orbitalSpeed; // Use elapsedTime for consistent movement
               asteroid.position.x = Math.cos(currentAngle) * P.orbitalRadius;
               asteroid.position.z = Math.sin(currentAngle) * P.orbitalRadius;
-              // Y position is static for asteroids after initial placement
-
               if (P.rotationSpeed) {
                 asteroid.rotation.x += P.rotationSpeed.x;
                 asteroid.rotation.y += P.rotationSpeed.y;
@@ -260,6 +318,44 @@ export function GalaxyMap() {
           }
         });
       }
+      
+      // Animate Halley's Comet
+      if (cometMeshRef.current && cometOrbitCurveRef.current && cometMeshRef.current.userData.orbitalParams) {
+        const cometMesh = cometMeshRef.current;
+        const cometData = cometMesh.userData as CelestialBodyInfo & { currentU: number };
+        const params = cometData.orbitalParams!;
+        
+        const sunPosition = new THREE.Vector3(0,0,0); // Sun is at origin
+        // Get comet's world position for distance calculation
+        const cometWorldPosition = new THREE.Vector3();
+        cometMesh.getWorldPosition(cometWorldPosition);
+        const distanceToSun = cometWorldPosition.distanceTo(sunPosition);
+
+        const minSpeedFactor = 0.0005 / (params.orbitalPeriodYears / 76) ; // Base speed at aphelion
+        const maxSpeedFactor = 0.1 / (params.orbitalPeriodYears / 76);    // Base speed at perihelion
+
+        let speedFactor;
+        if (distanceToSun <= params.perihelionDistance * 1.1) { // Add some buffer
+            speedFactor = maxSpeedFactor;
+        } else if (distanceToSun >= params.aphelionDistance * 0.9) {
+            speedFactor = minSpeedFactor;
+        } else {
+            // Simple inverse relationship for speed: further = slower
+            const normalizedDistance = (distanceToSun - params.perihelionDistance) / (params.aphelionDistance - params.perihelionDistance); // 0 (peri) to 1 (aph)
+            speedFactor = maxSpeedFactor - (normalizedDistance * (maxSpeedFactor - minSpeedFactor));
+            speedFactor = Math.max(minSpeedFactor, speedFactor); // clamp
+        }
+        
+        cometData.currentU += speedFactor * deltaTime;
+        if (cometData.currentU >= 1) {
+            cometData.currentU = 0; 
+        }
+        
+        const localPositionOnEllipse = cometOrbitCurveRef.current.getPoint(cometData.currentU);
+        cometMesh.position.set(localPositionOnEllipse.x, localPositionOnEllipse.y, 0); // Set local position within the rotated group
+        cometMesh.rotation.y += 0.005; // Slow rotation
+      }
+
 
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     };
@@ -283,43 +379,37 @@ export function GalaxyMap() {
       if (controlsRef.current) controlsRef.current.dispose();
 
       if (asteroidsGroupRef.current && sceneRef.current) {
-        asteroidsGroupRef.current.children.forEach(child => {
-          if (child instanceof THREE.Mesh) {
-            child.geometry.dispose();
-            if (Array.isArray(child.material)) {
-              child.material.forEach(material => material.dispose());
-            } else {
-              (child.material as THREE.Material).dispose();
-            }
-          }
-        });
-        sceneRef.current.remove(asteroidsGroupRef.current); // Remove group from scene
+        asteroidsGroupRef.current.children.forEach(child => { /* ... existing dispose ... */ });
+        sceneRef.current.remove(asteroidsGroupRef.current);
         asteroidsGroupRef.current = null;
       }
-      // Dispose shared asteroid geometry and material if they were stored outside loop
-      asteroidGeometry.dispose();
-      asteroidMaterial.dispose();
+      asteroidGeometry.dispose(); // Shared geometry
+      asteroidMaterial.dispose(); // Shared material
 
-
-      if (sceneRef.current) {
-        sceneRef.current.traverse(object => {
+      // Dispose comet resources
+      if (cometGroupRef.current && sceneRef.current) {
+        cometGroupRef.current.traverse(object => {
           if (object instanceof THREE.Mesh) {
             object.geometry.dispose();
             if (Array.isArray(object.material)) {
               object.material.forEach(material => material.dispose());
-            } else if (object.material && typeof (object.material as any).dispose === 'function') {
-              (object.material as any).dispose();
+            } else {
+              (object.material as THREE.Material).dispose();
             }
-          }
-           if (object instanceof THREE.Line) {
-            object.geometry.dispose();
-            if (Array.isArray(object.material)) {
-              object.material.forEach(material => material.dispose());
-            } else if (object.material && typeof (object.material as any).dispose === 'function') {
-               (object.material as any).dispose();
-            }
+          } else if (object instanceof THREE.Line) {
+             object.geometry.dispose();
+            (object.material as THREE.Material).dispose();
           }
         });
+        sceneRef.current.remove(cometGroupRef.current);
+      }
+      cometMeshRef.current = null;
+      cometOrbitCurveRef.current = null;
+      cometGroupRef.current = null;
+
+
+      if (sceneRef.current) {
+        sceneRef.current.traverse(object => { /* ... existing dispose ... */ });
       }
       planetsRef.current = [];
     };
@@ -327,7 +417,7 @@ export function GalaxyMap() {
   
   const zoom = (factor: number) => {
     if(controlsRef.current) {
-      controlsRef.current.dollyIn(factor); // dollyIn makes it zoom in, dollyOut zooms out. Factor > 1 zooms in.
+      controlsRef.current.dollyIn(factor); 
       controlsRef.current.update();
     }
   }
@@ -335,16 +425,15 @@ export function GalaxyMap() {
   const resetView = () => {
     if (controlsRef.current && cameraRef.current) {
       controlsRef.current.reset();
-      // Reset to a suitable overview position
       cameraRef.current.position.set(0, 45, 60); 
-      controlsRef.current.target.set(0,0,0); // Look at the center (Sun)
+      controlsRef.current.target.set(0,0,0); 
       controlsRef.current.update();
     }
   }
 
   return (
     <div className="relative w-full h-[calc(100vh-10rem)] rounded-lg overflow-hidden border border-primary/30 shadow-2xl shadow-primary/20">
-      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets orbit asteroid belt" />
+      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets orbit asteroid belt comet" />
       <div className="absolute top-4 right-4 flex flex-col gap-2">
         <Button size="icon" onClick={() => zoom(1.2)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomInIcon className="w-5 h-5" /></Button>
         <Button size="icon" onClick={() => zoom(0.8)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomOutIcon className="w-5 h-5" /></Button>
@@ -372,6 +461,15 @@ export function GalaxyMap() {
                 <p><strong>Key Resources:</strong> {selectedBody.resources.join(', ')}</p>
                 <p><strong>Terrain Type:</strong> {selectedBody.terrain}</p>
                 <p><strong>Primary Biome:</strong> {selectedBody.biome}</p>
+                {selectedBody.type === 'Comet' && selectedBody.orbitalParams && (
+                  <>
+                    <hr className="my-2 border-primary/30" />
+                    <p><strong>Perihelion:</strong> {(selectedBody.orbitalParams.perihelionDistance / SOLAR_SYSTEM_SCALE_FACTOR).toFixed(2)} AU</p>
+                    <p><strong>Aphelion:</strong> {(selectedBody.orbitalParams.aphelionDistance / SOLAR_SYSTEM_SCALE_FACTOR).toFixed(2)} AU</p>
+                    <p><strong>Orbital Period:</strong> ~{selectedBody.orbitalParams.orbitalPeriodYears} Earth years</p>
+                    <p><strong>Inclination:</strong> {(selectedBody.orbitalParams.inclination * (180 / Math.PI)).toFixed(1)}°</p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </motion.div>
