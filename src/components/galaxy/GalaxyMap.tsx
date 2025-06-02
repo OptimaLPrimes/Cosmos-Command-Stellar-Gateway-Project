@@ -1,3 +1,4 @@
+
 // src/components/galaxy/GalaxyMap.tsx
 "use client";
 
@@ -70,15 +71,17 @@ const ASTEROID_BELT_INNER_RADIUS = 33;
 const ASTEROID_BELT_OUTER_RADIUS = 42;
 const ASTEROID_BELT_THICKNESS = 1.5;
 
-const EXISTING_STAR_COUNT = 5000; // Reduced from 15000
+const EXISTING_STAR_COUNT = 5000;
 
-const GALAXY_PARTICLE_COUNT = 25000;
+const GALAXY_PARTICLE_COUNT = 35000; // Increased for better density
 const GALAXY_RADIUS = 1500;
-const GALAXY_CORE_RADIUS = 300;
-const GALAXY_THICKNESS = 70;
+const GALAXY_CORE_BULGE_RADIUS = GALAXY_RADIUS * 0.15; // Dense central spherical part
+const GALAXY_BAR_LENGTH = GALAXY_RADIUS * 0.5;
+const GALAXY_BAR_WIDTH = GALAXY_RADIUS * 0.1;
+const GALAXY_THICKNESS = 70; // Overall vertical thickness for the disk
 const GALAXY_PARTICLE_SIZE = 2.5;
 const GALAXY_VISIBILITY_START_DISTANCE = 300;
-const GALAXY_VISIBILITY_FULL_DISTANCE = 900; // Camera distance when galaxy is fully visible
+const GALAXY_VISIBILITY_FULL_DISTANCE = 900;
 const CONTROLS_MAX_DISTANCE = 4000;
 
 
@@ -121,7 +124,7 @@ export function GalaxyMap() {
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x050005); // Darker background
+    scene.background = new THREE.Color(0x050005);
 
     const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, CONTROLS_MAX_DISTANCE * 1.5);
     camera.position.set(0, 45, 60); 
@@ -146,55 +149,93 @@ export function GalaxyMap() {
     pointLight.position.set(0, 0, 0); 
     scene.add(pointLight);
 
-    const starGeometry = new THREE.BufferGeometry();
-    starGeometryRef.current = starGeometry;
-    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, sizeAttenuation: true, transparent: true, opacity: 0.7 });
-    starMaterialRef.current = starMaterial;
+    const bgStarGeometry = new THREE.BufferGeometry();
+    starGeometryRef.current = bgStarGeometry;
+    const bgStarMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, sizeAttenuation: true, transparent: true, opacity: 0.7 });
+    starMaterialRef.current = bgStarMaterial;
     const starVertices = [];
     for (let i = 0; i < EXISTING_STAR_COUNT; i++) {
       const x = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2);
       const y = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2);
       const z = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2);
       const dist = Math.sqrt(x*x + y*y + z*z);
-      if (dist > 300 && dist < CONTROLS_MAX_DISTANCE * 1.2) { // Ensure stars are far out
+      if (dist > 300 && dist < CONTROLS_MAX_DISTANCE * 1.2) {
          starVertices.push(x, y, z);
       }
     }
-    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-    const stars = new THREE.Points(starGeometry, starMaterial);
-    scene.add(stars);
+    bgStarGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+    const backgroundStars = new THREE.Points(bgStarGeometry, bgStarMaterial);
+    scene.add(backgroundStars);
     
     const textureLoader = new THREE.TextureLoader();
 
-    // Create Milky Way Galaxy
     const galaxyVerticesArray: number[] = [];
     const galaxyColorsArray: number[] = [];
     const galaxyColor = new THREE.Color();
 
     for (let i = 0; i < GALAXY_PARTICLE_COUNT; i++) {
-      let r, y_spread_factor;
-      if (Math.random() < 0.2) { // 20% chance for a core star
-        r = Math.random() * GALAXY_CORE_RADIUS;
-        y_spread_factor = 0.3; // Core is flatter
-      } else { // 80% chance for a disk star
-        r = GALAXY_CORE_RADIUS + Math.random() * (GALAXY_RADIUS - GALAXY_CORE_RADIUS);
-        y_spread_factor = 1.0;
-      }
+        let x_pos, y_pos, z_pos;
+        const randVal = Math.random();
+        let isArmParticle = false;
+  
+        if (randVal < 0.2) { // 20% Core Bulge Particles (densest, most spherical)
+          const r = Math.random() * GALAXY_CORE_BULGE_RADIUS;
+          const theta_core = Math.random() * 2 * Math.PI;
+          const phi_core = Math.acos(2 * Math.random() - 1); // More uniform spherical distribution for bulge
+          x_pos = r * Math.sin(phi_core) * Math.cos(theta_core);
+          z_pos = r * Math.sin(phi_core) * Math.sin(theta_core);
+          y_pos = r * Math.cos(phi_core) * 0.5; // Slightly flattened core bulge
+          galaxyColor.setHSL(0.08 + Math.random() * 0.12, 0.9, 0.7 + Math.random() * 0.1); // Yellowish-orange
+        
+        } else if (randVal < 0.45) { // 25% Bar Particles
+          x_pos = (Math.random() - 0.5) * GALAXY_BAR_LENGTH;
+          const barTaperFactor = 1 - Math.pow(Math.abs(x_pos) / (GALAXY_BAR_LENGTH / 2 + 1e-6), 2.5); // Smoother taper
+          z_pos = (Math.random() - 0.5) * GALAXY_BAR_WIDTH * Math.max(0.1, barTaperFactor); // Ensure min width
+          y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * 0.20 * Math.max(0.1, barTaperFactor); // Bar is quite flat
+          galaxyColor.setHSL(0.1 + Math.random() * 0.08, 0.85, 0.65 + Math.random() * 0.15); // Orange/Yellow
+        
+        } else { // 55% Arm & Disk Particles
+          isArmParticle = true;
+          const r_disk = Math.pow(Math.random(), 0.7) * GALAXY_RADIUS; // Distribute more towards center initially
+          let theta_disk = Math.random() * 2 * Math.PI;
+  
+          // Introduce spiral shape by biasing theta based on r and bar ends
+          const numArms = 2; // Typical for barred spirals
+          const armTightness = 1.5; // Controls how tightly arms are wound
+          const armPhase = (r_disk / GALAXY_RADIUS) * numArms * Math.PI * armTightness;
+          
+          // Rotate particles based on which arm they "belong" to, offset from bar ends
+          const barInfluenceFactor = Math.max(0, 1 - (r_disk / (GALAXY_BAR_LENGTH * 0.75)));
+          const angleOffsetFromBar = Math.PI / numArms; // To start arms from ends of bar somewhat
+          
+          theta_disk += armPhase + (Math.floor(theta_disk / (Math.PI / numArms)) % numArms) * angleOffsetFromBar * barInfluenceFactor;
 
-      const theta = Math.random() * 2 * Math.PI;
-      const x_pos = r * Math.cos(theta);
-      const z_pos = r * Math.sin(theta);
-      const y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * y_spread_factor * (0.2 + 0.8 * (r / GALAXY_RADIUS));
-      
-      galaxyVerticesArray.push(x_pos, y_pos, z_pos);
+          x_pos = r_disk * Math.cos(theta_disk);
+          z_pos = r_disk * Math.sin(theta_disk);
+          // Disk particles, thinner towards edge, thicker towards center/bar influence
+          const diskThicknessFactor = 0.15 + 0.35 * (1 - r_disk / GALAXY_RADIUS) + 0.1 * barInfluenceFactor;
+          y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * diskThicknessFactor;
+  
+          if (Math.random() < 0.15 && r_disk > GALAXY_CORE_BULGE_RADIUS * 1.5) { // 15% of arm particles are pinkish (nebulae)
+              galaxyColor.setHSL(0.92 + Math.random() * 0.1, 0.85, 0.7 + Math.random() * 0.1); // Pinks/Magentas
+          } else { // Default blue/white for arms/disk
+              galaxyColor.setHSL(0.58 + Math.random() * 0.15, 0.9, 0.75 + Math.random() * 0.15); // Blues/Cyans/Whites
+          }
+        }
+        
+        y_pos += (Math.random() - 0.5) * GALAXY_THICKNESS * 0.05; // General small vertical noise
 
-      if (Math.random() < 0.7) { 
-        galaxyColor.setHSL(0.55 + Math.random() * 0.2, 0.8 + Math.random()*0.2, 0.6 + Math.random() * 0.3); // Blues / Whites
-      } else { 
-        galaxyColor.setHSL(0.05 + Math.random() * 0.1, 0.8 + Math.random()*0.2, 0.6 + Math.random() * 0.2); // Pale Yellows/Oranges
+        const distSq = x_pos * x_pos + z_pos * z_pos;
+        if (distSq > GALAXY_RADIUS * GALAXY_RADIUS && isArmParticle) {
+          const dist = Math.sqrt(distSq);
+          const scale = (GALAXY_RADIUS / dist) * (0.95 + Math.random() * 0.05); 
+          x_pos *= scale;
+          z_pos *= scale;
+        }
+  
+        galaxyVerticesArray.push(x_pos, y_pos, z_pos);
+        galaxyColorsArray.push(galaxyColor.r, galaxyColor.g, galaxyColor.b);
       }
-      galaxyColorsArray.push(galaxyColor.r, galaxyColor.g, galaxyColor.b);
-    }
 
     const mwGeometry = new THREE.BufferGeometry();
     mwGeometry.setAttribute('position', new THREE.Float32BufferAttribute(galaxyVerticesArray, 3));
@@ -206,7 +247,7 @@ export function GalaxyMap() {
       sizeAttenuation: true,
       vertexColors: true,
       transparent: true,
-      opacity: 0, // Start invisible
+      opacity: 0, 
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
@@ -387,7 +428,7 @@ export function GalaxyMap() {
               asteroid.position.x = Math.cos(currentAngle) * P.orbitalRadius;
               asteroid.position.z = Math.sin(currentAngle) * P.orbitalRadius;
               if (P.rotationSpeed) {
-                asteroid.rotation.x += P.rotationSpeed.x * deltaTime * 20; // make rotation speed more noticeable
+                asteroid.rotation.x += P.rotationSpeed.x * deltaTime * 20;
                 asteroid.rotation.y += P.rotationSpeed.y * deltaTime * 20;
                 asteroid.rotation.z += P.rotationSpeed.z * deltaTime * 20;
               }
@@ -403,8 +444,8 @@ export function GalaxyMap() {
         
         const sunPosition = new THREE.Vector3(0,0,0);
         const cometWorldPosition = new THREE.Vector3();
-        // Need to get world position from the mesh itself as it's parented to an inclined group
-        if (cometMesh.parent) { // cometMesh is in cometGroupRef
+
+        if (cometMesh.parent) { 
             cometMesh.parent.localToWorld(cometMesh.position.clone(cometWorldPosition));
         } else {
              cometMesh.getWorldPosition(cometWorldPosition);
@@ -436,13 +477,13 @@ export function GalaxyMap() {
       }
 
       if (milkyWayParticlesRef.current && milkyWayMaterialRef.current && controlsRef.current) {
-        milkyWayParticlesRef.current.rotation.y += 0.00002 * deltaTime * 60; // Very slow rotation
+        milkyWayParticlesRef.current.rotation.y += 0.00002 * deltaTime * 60; 
         const distance = controlsRef.current.getDistance();
         let opacity = 0;
         if (distance > GALAXY_VISIBILITY_START_DISTANCE) {
           opacity = Math.min(1, (distance - GALAXY_VISIBILITY_START_DISTANCE) / (GALAXY_VISIBILITY_FULL_DISTANCE - GALAXY_VISIBILITY_START_DISTANCE));
         }
-        milkyWayMaterialRef.current.opacity = opacity * 0.4; // Max opacity
+        milkyWayMaterialRef.current.opacity = opacity * 0.45; // Slightly increased max opacity for galaxy
       }
 
 
@@ -467,7 +508,6 @@ export function GalaxyMap() {
       
       if (controlsRef.current) controlsRef.current.dispose();
       
-      // Dispose Milky Way resources
       if (milkyWayGeometryRef.current) milkyWayGeometryRef.current.dispose();
       if (milkyWayMaterialRef.current) milkyWayMaterialRef.current.dispose();
       if (milkyWayParticlesRef.current && sceneRef.current) sceneRef.current.remove(milkyWayParticlesRef.current);
@@ -475,10 +515,10 @@ export function GalaxyMap() {
       milkyWayGeometryRef.current = null;
       milkyWayMaterialRef.current = null;
 
-      // Dispose background stars resources
       if (starGeometryRef.current) starGeometryRef.current.dispose();
       if (starMaterialRef.current) starMaterialRef.current.dispose();
-      // The 'stars' THREE.Points object itself is implicitly removed when scene is cleared or parent is.
+      if (backgroundStars && sceneRef.current) sceneRef.current.remove(backgroundStars);
+
 
       if (asteroidsGroupRef.current && sceneRef.current) {
         sceneRef.current.remove(asteroidsGroupRef.current); 
@@ -508,7 +548,7 @@ export function GalaxyMap() {
         sceneRef.current.remove(cometGroupRef.current);
       }
       cometMeshRef.current = null;
-      cometOrbitCurveRef.current = null; // Curve itself doesn't need dispose
+      cometOrbitCurveRef.current = null; 
       cometGroupRef.current = null;
 
 
@@ -524,16 +564,16 @@ export function GalaxyMap() {
             } else if (object instanceof THREE.Line) {
                  if (object.geometry) object.geometry.dispose();
                  if (object.material) (object.material as THREE.Material).dispose();
-            } else if (object instanceof THREE.Points && object !== milkyWayParticlesRef.current && object !== stars) { // Avoid re-disposing manually managed points
+            } else if (object instanceof THREE.Points && object !== milkyWayParticlesRef.current && object !== backgroundStars) {
                 if (object.geometry) object.geometry.dispose();
                 if (object.material) (object.material as THREE.Material).dispose();
             }
         });
       }
       planetsRef.current = [];
-      if (rendererRef.current) rendererRef.current.dispose(); // Dispose renderer last
-      rendererRef.current = null; // clear ref
-      sceneRef.current = null; // clear ref
+      if (rendererRef.current) rendererRef.current.dispose(); 
+      rendererRef.current = null; 
+      sceneRef.current = null; 
     };
   }, []);
   
@@ -555,7 +595,7 @@ export function GalaxyMap() {
 
   return (
     <div className="relative w-full h-[calc(100vh-10rem)] rounded-lg overflow-hidden border border-primary/30 shadow-2xl shadow-primary/20">
-      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets orbit asteroid belt comet milky way galaxy" />
+      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets orbit asteroid belt comet milky way galaxy barred spiral" />
       <div className="absolute top-4 right-4 flex flex-col gap-2">
         <Button size="icon" onClick={() => zoom(1.2)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomInIcon className="w-5 h-5" /></Button>
         <Button size="icon" onClick={() => zoom(0.8)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomOutIcon className="w-5 h-5" /></Button>
@@ -601,4 +641,4 @@ export function GalaxyMap() {
   );
 }
 
-    
+      
