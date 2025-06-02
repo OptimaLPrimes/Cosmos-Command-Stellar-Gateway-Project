@@ -65,7 +65,7 @@ const solarSystemData: CelestialBodyInfo[] = [
   }
 ];
 
-const ASTEROID_COUNT = 300;
+const ASTEROID_COUNT = 1000;
 const ASTEROID_BELT_INNER_RADIUS = 33;
 const ASTEROID_BELT_OUTER_RADIUS = 42;
 const ASTEROID_BELT_THICKNESS = 1.5;
