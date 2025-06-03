@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Orbit, MessageCircle, Globe, RocketIcon } from "lucide-react";
+import { LayoutDashboard, Orbit, MessageCircle, Globe, RocketIcon, Crosshair } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/galaxy", label: "Galaxy Explorer", icon: Orbit },
   { href: "/chatbot", label: "Cosmic Oracle", icon: MessageCircle },
   { href: "/planets/preview", label: "Planet Forge", icon: Globe },
+  { href: "/asteroid-field", label: "Asteroid Field", icon: Crosshair },
 ];
 
 export function Header() {
