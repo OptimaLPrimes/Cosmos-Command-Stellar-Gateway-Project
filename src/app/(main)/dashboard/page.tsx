@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 
 const sampleMissions = [
   {
-    id: "m1",
+    id: "kepler-186f",
     title: "Explore Kepler-186f",
     description: "Chart the surface and analyze atmospheric composition of the exoplanet Kepler-186f.",
     status: "Active",
@@ -21,7 +21,7 @@ const sampleMissions = [
     dataAiHint: "exoplanet surface",
   },
   {
-    id: "m2",
+    id: "asteroid-mining-run",
     title: "Asteroid Mining Run",
     description: "Collect valuable minerals from the Psyche asteroid belt.",
     status: "Planned",
@@ -33,7 +33,7 @@ const sampleMissions = [
     dataAiHint: "asteroid mining",
   },
   {
-    id: "m3",
+    id: "terraform-mars-outpost",
     title: "Terraform Mars Outpost",
     description: "Establish a self-sustaining habitat on the Martian surface.",
     status: "Completed",
@@ -45,11 +45,11 @@ const sampleMissions = [
   },
 ];
 
-const MISSIONS_COMPLETED_STATIC = 1; // Number of missions with status "Completed"
-const XP_PER_LEVEL = 500; // Example: XP needed to level up
+const MISSIONS_COMPLETED_STATIC = sampleMissions.filter(m => m.status === "Completed").length;
+const XP_PER_LEVEL = 500; 
 
 export default function DashboardPage() {
-  const [totalXp, setTotalXp] = useState(125); // Initial XP
+  const [totalXp, setTotalXp] = useState(125); 
   const [missionsCompleted, setMissionsCompleted] = useState(MISSIONS_COMPLETED_STATIC);
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null);
 
