@@ -1,7 +1,7 @@
 // src/app/(main)/dashboard/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MissionSummaryCard } from "@/components/dashboard/MissionSummaryCard";
 import { DailyQuizCard } from "@/components/dashboard/DailyQuizCard";
 import { Zap, BarChart3, Activity } from "lucide-react";
@@ -51,6 +51,11 @@ const XP_PER_LEVEL = 500; // Example: XP needed to level up
 export default function DashboardPage() {
   const [totalXp, setTotalXp] = useState(125); // Initial XP
   const [missionsCompleted, setMissionsCompleted] = useState(MISSIONS_COMPLETED_STATIC);
+  const [lastCheckTime, setLastCheckTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLastCheckTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  }, []);
 
   const handleQuizCorrect = (xpEarned: number) => {
     setTotalXp(prevXp => prevXp + xpEarned);
@@ -109,7 +114,9 @@ export default function DashboardPage() {
                   <Zap className="w-5 h-5 mr-2" /> System Checks
                 </h3>
                 <p className="text-2xl font-bold text-green-400">All Nominal</p>
-                <p className="text-sm text-muted-foreground mt-1">Last check: {new Date().toLocaleTimeString()}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Last check: {lastCheckTime !== null ? lastCheckTime : 'Loading...'}
+                </p>
             </div>
         </div>
       </section>
