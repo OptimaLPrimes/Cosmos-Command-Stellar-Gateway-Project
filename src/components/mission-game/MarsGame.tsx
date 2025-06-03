@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GameHUD } from "./GameHUD";
+import { GameHUD } from "@/components/mission-game/GameHUD";
 import { Rocket, HardHat } from "lucide-react";
 import { useMissionStore } from "@/stores/mission-game-store";
 
