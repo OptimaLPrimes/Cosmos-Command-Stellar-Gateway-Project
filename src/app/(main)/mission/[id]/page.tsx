@@ -6,7 +6,7 @@ import { KeplerGame } from "@/components/mission-game/KeplerGame";
 import { AsteroidGame } from "@/components/mission-game/AsteroidGame";
 import { MarsGame } from "@/components/mission-game/MarsGame";
 import { useMissionStore, type MissionId } from "@/stores/mission-game-store";
-import { AlertCircle, Construction } from "lucide-react";
+import { AlertCircle } from "lucide-react"; // Removed Construction as it's not used
 
 interface MissionPageProps {
   params: {
@@ -15,23 +15,20 @@ interface MissionPageProps {
 }
 
 export default function MissionPage({ params }: MissionPageProps) {
-  const { loadMissionData, missionTitle } = useMissionStore();
+  const { loadMissionData, resetMission } = useMissionStore();
+  // missionTitle is part of the store, can be accessed by components that use the store
 
   useEffect(() => {
-    // For now, only Kepler mission has actual data loading logic.
-    // This can be expanded as other missions are developed.
-    if (params.id === "kepler-186f") {
-      loadMissionData(params.id as MissionId);
-    } else if (params.id === "asteroid-mining-run") {
-      // Placeholder for loading asteroid mission data
-      useMissionStore.setState({ missionTitle: "Asteroid Mining Run", objectives: [], crew: [], progress: 0 });
-    } else if (params.id === "terraform-mars-outpost") {
-      // Placeholder for loading Mars mission data
-      useMissionStore.setState({ missionTitle: "Terraform Mars Outpost", objectives: [], crew: [], progress: 0 });
-    } else {
-      useMissionStore.setState({ missionTitle: "Unknown Mission", objectives: [], crew: [], progress: 0 });
-    }
-  }, [params.id, loadMissionData]);
+    // Reset mission state before loading new data to ensure clean state
+    resetMission(); 
+    loadMissionData(params.id as MissionId);
+
+    // Cleanup function to reset store when component unmounts or params.id changes
+    // This is important to avoid stale state if user navigates away and back
+    return () => {
+      resetMission();
+    };
+  }, [params.id, loadMissionData, resetMission]);
 
   const renderMissionContent = () => {
     switch (params.id) {

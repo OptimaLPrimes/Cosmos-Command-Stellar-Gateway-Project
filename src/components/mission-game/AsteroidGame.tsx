@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GameHUD } from "@/components/mission-game/GameHUD"; // Corrected import path
+import { GameHUD } from "@/components/mission-game/GameHUD"; // Ensured correct import path
 import { ShieldAlert, Mine } from "lucide-react";
 import { useMissionStore } from "@/stores/mission-game-store";
 
