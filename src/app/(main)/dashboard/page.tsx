@@ -1,5 +1,6 @@
 // src/app/(main)/dashboard/page.tsx
 import { MissionSummaryCard } from "@/components/dashboard/MissionSummaryCard";
+import { DailyQuizCard } from "@/components/dashboard/DailyQuizCard";
 import { Zap } from "lucide-react";
 
 const sampleMissions = [
@@ -13,6 +14,7 @@ const sampleMissions = [
     crewSize: 4,
     objectiveCount: 5,
     imageUrl: "https://placehold.co/600x300/1A001A/39FF14.png?text=Kepler-186f",
+    dataAiHint: "exoplanet surface",
   },
   {
     id: "m2",
@@ -24,6 +26,7 @@ const sampleMissions = [
     crewSize: 2,
     objectiveCount: 3,
     imageUrl: "https://placehold.co/600x300/1A001A/7DF9FF.png?text=Asteroid+Belt",
+    dataAiHint: "asteroid mining",
   },
   {
     id: "m3",
@@ -34,6 +37,7 @@ const sampleMissions = [
     crewSize: 8,
     objectiveCount: 12,
     imageUrl: "https://placehold.co/600x300/1A001A/FFFFFF.png?text=Mars+Outpost",
+    dataAiHint: "mars habitat",
   },
 ];
 
@@ -52,12 +56,16 @@ export default function DashboardPage() {
         <h2 className="text-2xl font-headline font-semibold mb-4 text-glow-accent">Active & Upcoming Missions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sampleMissions.map((mission) => (
-            <MissionSummaryCard key={mission.id} {...mission} />
+            <MissionSummaryCard key={mission.id} {...mission} data-ai-hint={mission.dataAiHint} />
           ))}
         </div>
       </section>
 
-      {/* Placeholder for animated XP/progress meters */}
+      <section>
+        <h2 className="text-2xl font-headline font-semibold mb-4 text-glow-accent">Daily Galactic Challenge</h2>
+        <DailyQuizCard />
+      </section>
+
       <section>
         <h2 className="text-2xl font-headline font-semibold mb-4 text-glow-accent">Overall Progress</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

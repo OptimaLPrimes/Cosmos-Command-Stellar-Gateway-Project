@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Users, Target } from "lucide-react";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 interface MissionSummaryCardProps {
   id: string;
@@ -15,6 +16,7 @@ interface MissionSummaryCardProps {
   crewSize?: number;
   objectiveCount?: number;
   imageUrl?: string;
+  "data-ai-hint"?: string;
 }
 
 export function MissionSummaryCard({
@@ -26,6 +28,7 @@ export function MissionSummaryCard({
   crewSize,
   objectiveCount,
   imageUrl = "https://placehold.co/300x150.png",
+  "data-ai-hint": dataAiHint = "space mission",
 }: MissionSummaryCardProps) {
   const statusColors = {
     Planned: "bg-blue-500/20 text-blue-400 border-blue-500/50",
@@ -42,7 +45,7 @@ export function MissionSummaryCard({
           width={300} 
           height={150} 
           className="w-full h-36 object-cover"
-          data-ai-hint="space mission" 
+          data-ai-hint={dataAiHint} 
         />
         <div className="p-4">
           <div className="flex justify-between items-start mb-2">
@@ -85,8 +88,4 @@ export function MissionSummaryCard({
       </CardContent>
     </Card>
   );
-}
-
-function cn(...classes: (string | undefined | false | null)[]) {
-  return classes.filter(Boolean).join(' ');
 }
