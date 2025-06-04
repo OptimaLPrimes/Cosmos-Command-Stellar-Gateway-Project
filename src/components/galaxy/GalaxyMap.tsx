@@ -190,9 +190,9 @@ export function GalaxyMap() {
     controls.maxDistance = CONTROLS_MAX_DISTANCE;
     controlsRef.current = controls;
     
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); 
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Slightly increased ambient light
     scene.add(ambientLight);
-    const pointLight = new THREE.PointLight(0xffffff, 3.0, SOLAR_SYSTEM_SCALE_FACTOR * 5); 
+    const pointLight = new THREE.PointLight(0xffffff, 4.5, SOLAR_SYSTEM_SCALE_FACTOR * 6); // Increased point light intensity and range
     pointLight.position.set(0, 0, 0); 
     scene.add(pointLight);
 
@@ -337,10 +337,11 @@ export function GalaxyMap() {
       const params = bodyData.orbitalParams;
       const nucleusGeo = new THREE.SphereGeometry(bodyData.size, 16, 16);
       const nucleusMat = new THREE.MeshStandardMaterial({
-        map: textureLoader.load(bodyData.textureUrl),
+        map: textureLoader.load(bodyData.textureUrl), // Texture applied here
         emissive: bodyData.color,
         emissiveIntensity: 0.3,
-        roughness: 0.8,
+        roughness: 0.8, // Adjust for desired surface appearance
+        metalness: 0.1, // Adjust for desired surface appearance
       });
       const mesh = new THREE.Mesh(nucleusGeo, nucleusMat);
       mesh.userData = { ...bodyData, currentU: Math.random() }; 
@@ -386,7 +387,12 @@ export function GalaxyMap() {
         if (bodyData.type === 'Star' || bodyData.type === 'Distant Star') { 
           material = new THREE.MeshBasicMaterial({ map: bodyTexture, emissive: bodyData.color, emissiveIntensity: bodyData.type === 'Distant Star' ? 5.0 : 1.5 });
         } else { 
-          material = new THREE.MeshStandardMaterial({ map: bodyTexture, roughness: 0.8, metalness: 0.1 });
+          // Planets use MeshStandardMaterial for realistic lighting
+          material = new THREE.MeshStandardMaterial({ 
+            map: bodyTexture, // Texture applied here
+            roughness: 0.8,   // Affects how light scatters: 0 is smooth (shiny), 1 is rough (matte)
+            metalness: 0.1    // Affects how metallic the surface appears
+          });
         }
         const bodyMesh = new THREE.Mesh(geometry, material);
         bodyMesh.position.set(...bodyData.position);
