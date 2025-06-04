@@ -1,3 +1,4 @@
+
 // src/components/galaxy/GalaxyMap.tsx
 "use client";
 
@@ -190,9 +191,9 @@ export function GalaxyMap() {
     controls.maxDistance = CONTROLS_MAX_DISTANCE;
     controlsRef.current = controls;
     
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Slightly increased ambient light
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
     scene.add(ambientLight);
-    const pointLight = new THREE.PointLight(0xffffff, 4.5, SOLAR_SYSTEM_SCALE_FACTOR * 6); // Increased point light intensity and range
+    const pointLight = new THREE.PointLight(0xffffff, 4.5, SOLAR_SYSTEM_SCALE_FACTOR * 6); 
     pointLight.position.set(0, 0, 0); 
     scene.add(pointLight);
 
@@ -209,7 +210,7 @@ export function GalaxyMap() {
       const y = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2.5);
       const z = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2.5);
       const dist = Math.sqrt(x*x + y*y + z*z);
-      if (dist > (neptuneOrbitRadius * 1.2) && dist < CAMERA_FAR_PLANE * 0.9) { // Ensure stars are beyond Neptune but within far plane
+      if (dist > (neptuneOrbitRadius * 1.2) && dist < CAMERA_FAR_PLANE * 0.9) { 
          starVertices.push(x, y, z);
       }
     }
@@ -337,11 +338,11 @@ export function GalaxyMap() {
       const params = bodyData.orbitalParams;
       const nucleusGeo = new THREE.SphereGeometry(bodyData.size, 16, 16);
       const nucleusMat = new THREE.MeshStandardMaterial({
-        map: textureLoader.load(bodyData.textureUrl), // Texture applied here
+        map: textureLoader.load(bodyData.textureUrl), 
         emissive: bodyData.color,
         emissiveIntensity: 0.3,
-        roughness: 0.8, // Adjust for desired surface appearance
-        metalness: 0.1, // Adjust for desired surface appearance
+        roughness: 0.8, 
+        metalness: 0.1, 
       });
       const mesh = new THREE.Mesh(nucleusGeo, nucleusMat);
       mesh.userData = { ...bodyData, currentU: Math.random() }; 
@@ -387,11 +388,10 @@ export function GalaxyMap() {
         if (bodyData.type === 'Star' || bodyData.type === 'Distant Star') { 
           material = new THREE.MeshBasicMaterial({ map: bodyTexture, emissive: bodyData.color, emissiveIntensity: bodyData.type === 'Distant Star' ? 5.0 : 1.5 });
         } else { 
-          // Planets use MeshStandardMaterial for realistic lighting
           material = new THREE.MeshStandardMaterial({ 
-            map: bodyTexture, // Texture applied here
-            roughness: 0.8,   // Affects how light scatters: 0 is smooth (shiny), 1 is rough (matte)
-            metalness: 0.1    // Affects how metallic the surface appears
+            map: bodyTexture, 
+            roughness: 0.8,   
+            metalness: 0.1    
           });
         }
         const bodyMesh = new THREE.Mesh(geometry, material);
