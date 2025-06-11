@@ -21,6 +21,16 @@ interface OrbitalParams {
   orbitalPeriodYears: number; // For display and conceptual animation speed
 }
 
+interface MoonInfo {
+  name: string;
+  textureUrl: string;
+  dataAiHint?: string;
+  actualRadiusKm: number; // Actual radius of the moon in km
+  actualOrbitalRadiusKm: number; // Actual average orbital radius around its planet in km
+  orbitalSpeedFactor: number; // Relative speed for animation
+  inclination?: number; // Optional orbital inclination in radians relative to planet's equator
+}
+
 interface CelestialBodyInfo {
   name: string;
   type: 'Star' | 'Planet' | 'Dwarf Planet' | 'Comet' | 'Distant Star' | 'Moon' | 'Satellite';
@@ -29,30 +39,81 @@ interface CelestialBodyInfo {
   terrain: string;
   biome: string;
   color: number;
-  size: number;
+  size: number; // Visual size in the scene
   position: [number, number, number];
   textureUrl: string;
   dataAiHint?: string;
-  orbitalSpeed?: number; // For planets & simple orbits
+  orbitalSpeed?: number; // For planets & simple orbits around the sun
   ringTextureUrl?: string;
   orbitalParams?: OrbitalParams; // For comets or complex orbits (Pluto, Eris)
   description?: string; // For info card
+  actualRadiusKm?: number; // Actual radius of the planet in km, used for moon scaling
+  moons?: MoonInfo[];
 }
+
 
 const SOLAR_SYSTEM_SCALE_FACTOR = 20; // 1 AU = 20 units in the scene
 const EARTH_RADIUS_KM = 6371; // Approximate radius of Earth in km
+const MOON_SIZE_DISPLAY_SCALE = 15; // Multiplier to make moons more visible
+const MOON_ORBIT_DISPLAY_SCALE = 2.5; // Multiplier to make moon orbits more visible relative to planet size
 
 const solarSystemData: CelestialBodyInfo[] = [
-  { name: 'Sun', type: 'Star', gravity: '274.0 m/s²', resources: ['Helium', 'Hydrogen'], terrain: 'Plasma', biome: 'Star', color: 0xFFD700, size: 4.0, position: [0,0,0], textureUrl: 'https://placehold.co/256x256/FFA500/DC143C.png?text=Sun+Surface', dataAiHint: 'sun plasma' },
-  { name: 'Mercury', type: 'Planet', gravity: '0.38 G', resources: ['Iron', 'Nickel'], terrain: 'Cratered', biome: 'Rocky', color: 0x8C8C8C, size: 0.5, position: [0.39 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/A0A0A0/333333.png?text=Mercury', orbitalSpeed: 0.47, dataAiHint: 'planet texture rocky' },
-  { name: 'Venus', type: 'Planet', gravity: '0.91 G', resources: ['Sulfuric Acid', 'CO2'], terrain: 'Volcanic Plains', biome: 'Hot House', color: 0xE6D2A8, size: 0.9, position: [0.72 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/E6D2A9/6B4F34.png?text=Venus', orbitalSpeed: 0.35, dataAiHint: 'planet texture cloudy' },
-  { name: 'Earth', type: 'Planet', gravity: '1.0 G', resources: ['Water', 'Oxygen', 'Life'], terrain: 'Varied', biome: 'Temperate', color: 0x6B93D6, size: 1.0, position: [1.00 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/6B93D6/1F5C2F.png?text=Earth', orbitalSpeed: 0.29, dataAiHint: 'planet texture earth-like' },
-  { name: 'Mars', type: 'Planet', gravity: '0.38 G', resources: ['Iron Oxide', 'Water Ice'], terrain: 'Canyons, Deserts', biome: 'Cold Desert', color: 0xD97C57, size: 0.7, position: [1.52 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/D97C57/80381F.png?text=Mars', orbitalSpeed: 0.24, dataAiHint: 'planet texture mars' },
-  { name: 'Ceres', type: 'Dwarf Planet', gravity: '0.029 G', resources: ['Water Ice', 'Rock'], terrain: 'Cratered, Icy Mantle', biome: 'Rocky/Icy', color: 0xAAAAAA, size: 0.2, position: [2.77 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/128x128/BBBBBB/555555.png?text=Ceres', orbitalSpeed: 0.18, dataAiHint: 'dwarf planet texture rock ice', description: "Largest object in the asteroid belt, composed of rock and ice. Orbits between Mars and Jupiter." },
-  { name: 'Jupiter', type: 'Planet', gravity: '2.53 G', resources: ['Hydrogen', 'Helium'], terrain: 'Gas Layers', biome: 'Gas Giant', color: 0xC9A78A, size: 2.8, position: [5.20 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/C9A78A/835F43.png?text=Jupiter', orbitalSpeed: 0.13, dataAiHint: 'planet texture jupiter' },
-  { name: 'Saturn', type: 'Planet', gravity: '1.07 G', resources: ['Hydrogen', 'Helium', 'Ice'], terrain: 'Gas Layers, Rings', biome: 'Gas Giant', color: 0xF0E6C6, size: 2.4, position: [9.54 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/F0E6C6/736A50.png?text=Saturn', orbitalSpeed: 0.09, dataAiHint: 'planet texture saturn', ringTextureUrl: 'https://placehold.co/512x64/D3CBB6/A9A086.png?text=Rings' },
-  { name: 'Uranus', type: 'Planet', gravity: '0.9 G', resources: ['Methane', 'Ammonia', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0xAEEEEE, size: 1.8, position: [19.2 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/AEEEEE/45B3B3.png?text=Uranus', orbitalSpeed: 0.06, dataAiHint: 'planet texture uranus' },
-  { name: 'Neptune', type: 'Planet', gravity: '1.14 G', resources: ['Methane', 'Hydrogen', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0x3A7CEC, size: 1.7, position: [30.06 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/3A7CEC/2A588F.png?text=Neptune', orbitalSpeed: 0.05, dataAiHint: 'planet texture neptune' },
+  { name: 'Sun', type: 'Star', gravity: '274.0 m/s²', resources: ['Helium', 'Hydrogen'], terrain: 'Plasma', biome: 'Star', color: 0xFFD700, size: 4.0, position: [0,0,0], textureUrl: 'https://placehold.co/256x256/FFA500/DC143C.png?text=Sun+Surface', dataAiHint: 'sun plasma', actualRadiusKm: 695000 },
+  { name: 'Mercury', type: 'Planet', gravity: '0.38 G', resources: ['Iron', 'Nickel'], terrain: 'Cratered', biome: 'Rocky', color: 0x8C8C8C, size: 0.5, position: [0.39 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/A0A0A0/333333.png?text=Mercury', orbitalSpeed: 0.47, dataAiHint: 'planet texture rocky', actualRadiusKm: 2440, moons: [] },
+  { name: 'Venus', type: 'Planet', gravity: '0.91 G', resources: ['Sulfuric Acid', 'CO2'], terrain: 'Volcanic Plains', biome: 'Hot House', color: 0xE6D2A8, size: 0.9, position: [0.72 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/E6D2A9/6B4F34.png?text=Venus', orbitalSpeed: 0.35, dataAiHint: 'planet texture cloudy', actualRadiusKm: 6052, moons: [] },
+  { 
+    name: 'Earth', type: 'Planet', gravity: '1.0 G', resources: ['Water', 'Oxygen', 'Life'], terrain: 'Varied', biome: 'Temperate', color: 0x6B93D6, size: 1.0, position: [1.00 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/6B93D6/1F5C2F.png?text=Earth', orbitalSpeed: 0.29, dataAiHint: 'planet texture earth-like', actualRadiusKm: EARTH_RADIUS_KM,
+    moons: [
+      { name: 'Moon', textureUrl: 'https://placehold.co/128x128/CCCCCC/888888.png?text=Moon', dataAiHint: 'moon surface', actualRadiusKm: 1737, actualOrbitalRadiusKm: 384400, orbitalSpeedFactor: 0.5 }
+    ]
+  },
+  { 
+    name: 'Mars', type: 'Planet', gravity: '0.38 G', resources: ['Iron Oxide', 'Water Ice'], terrain: 'Canyons, Deserts', biome: 'Cold Desert', color: 0xD97C57, size: 0.7, position: [1.52 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/D97C57/80381F.png?text=Mars', orbitalSpeed: 0.24, dataAiHint: 'planet texture mars', actualRadiusKm: 3390,
+    moons: [
+      { name: 'Phobos', textureUrl: 'https://placehold.co/64x64/A0A0A0/505050.png?text=Ph', dataAiHint: 'small moon asteroid', actualRadiusKm: 11, actualOrbitalRadiusKm: 9378, orbitalSpeedFactor: 1.2 },
+      { name: 'Deimos', textureUrl: 'https://placehold.co/64x64/C0C0C0/606060.png?text=De', dataAiHint: 'small moon asteroid', actualRadiusKm: 6, actualOrbitalRadiusKm: 23459, orbitalSpeedFactor: 0.8 }
+    ]
+  },
+  { name: 'Ceres', type: 'Dwarf Planet', gravity: '0.029 G', resources: ['Water Ice', 'Rock'], terrain: 'Cratered, Icy Mantle', biome: 'Rocky/Icy', color: 0xAAAAAA, size: 0.2, position: [2.77 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/128x128/BBBBBB/555555.png?text=Ceres', orbitalSpeed: 0.18, dataAiHint: 'dwarf planet texture rock ice', description: "Largest object in the asteroid belt, composed of rock and ice. Orbits between Mars and Jupiter.", actualRadiusKm: 473 },
+  { 
+    name: 'Jupiter', type: 'Planet', gravity: '2.53 G', resources: ['Hydrogen', 'Helium'], terrain: 'Gas Layers', biome: 'Gas Giant', color: 0xC9A78A, size: 2.8, position: [5.20 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/C9A78A/835F43.png?text=Jupiter', orbitalSpeed: 0.13, dataAiHint: 'planet texture jupiter', actualRadiusKm: 69911,
+    moons: [
+      { name: 'Io', textureUrl: 'https://placehold.co/128x128/FFFACD/FF8C00.png?text=Io', dataAiHint: 'moon volcanic sulfur', actualRadiusKm: 1821, actualOrbitalRadiusKm: 421700, orbitalSpeedFactor: 1.0 },
+      { name: 'Europa', textureUrl: 'https://placehold.co/128x128/ADD8E6/87CEEB.png?text=Eu', dataAiHint: 'moon icy cracks', actualRadiusKm: 1560, actualOrbitalRadiusKm: 671034, orbitalSpeedFactor: 0.8 },
+      { name: 'Ganymede', textureUrl: 'https://placehold.co/128x128/D2B48C/A0522D.png?text=Ga', dataAiHint: 'moon large icy', actualRadiusKm: 2634, actualOrbitalRadiusKm: 1070412, orbitalSpeedFactor: 0.6 },
+      { name: 'Callisto', textureUrl: 'https://placehold.co/128x128/A9A9A9/696969.png?text=Ca', dataAiHint: 'moon cratered dark', actualRadiusKm: 2410, actualOrbitalRadiusKm: 1882709, orbitalSpeedFactor: 0.4 }
+    ]
+  },
+  { 
+    name: 'Saturn', type: 'Planet', gravity: '1.07 G', resources: ['Hydrogen', 'Helium', 'Ice'], terrain: 'Gas Layers, Rings', biome: 'Gas Giant', color: 0xF0E6C6, size: 2.4, position: [9.54 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/F0E6C6/736A50.png?text=Saturn', orbitalSpeed: 0.09, dataAiHint: 'planet texture saturn', ringTextureUrl: 'https://placehold.co/512x64/D3CBB6/A9A086.png?text=Rings', actualRadiusKm: 58232,
+    moons: [
+        { name: 'Mimas', textureUrl: 'https://placehold.co/64x64/B0C4DE/778899.png?text=Mi', dataAiHint: 'moon small crater', actualRadiusKm: 198, actualOrbitalRadiusKm: 185539, orbitalSpeedFactor: 1.5 },
+        { name: 'Enceladus', textureUrl: 'https://placehold.co/64x64/F0FFFF/ADD8E6.png?text=En', dataAiHint: 'moon icy geyser', actualRadiusKm: 252, actualOrbitalRadiusKm: 237948, orbitalSpeedFactor: 1.3 },
+        { name: 'Tethys', textureUrl: 'https://placehold.co/64x64/D3D3D3/A9A9A9.png?text=Te', dataAiHint: 'moon icy valley', actualRadiusKm: 531, actualOrbitalRadiusKm: 294619, orbitalSpeedFactor: 1.1 },
+        { name: 'Dione', textureUrl: 'https://placehold.co/64x64/C0C0C0/808080.png?text=Di', dataAiHint: 'moon icy cliffs', actualRadiusKm: 561, actualOrbitalRadiusKm: 377396, orbitalSpeedFactor: 0.9 },
+        { name: 'Rhea', textureUrl: 'https://placehold.co/128x128/BEBEBE/708090.png?text=Rh', dataAiHint: 'moon icy bright', actualRadiusKm: 764, actualOrbitalRadiusKm: 527108, orbitalSpeedFactor: 0.7 },
+        { name: 'Titan', textureUrl: 'https://placehold.co/128x128/FFDEAD/D2691E.png?text=Ti', dataAiHint: 'moon hazy orange', actualRadiusKm: 2575, actualOrbitalRadiusKm: 1221870, orbitalSpeedFactor: 0.5 },
+        { name: 'Iapetus', textureUrl: 'https://placehold.co/128x128/FAF0E6/463E34.png?text=Ia', dataAiHint: 'moon two-tone', actualRadiusKm: 735, actualOrbitalRadiusKm: 3560820, orbitalSpeedFactor: 0.3, inclination: 0.26 } // ~15 degrees
+    ]
+  },
+  { 
+    name: 'Uranus', type: 'Planet', gravity: '0.9 G', resources: ['Methane', 'Ammonia', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0xAEEEEE, size: 1.8, position: [19.2 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/AEEEEE/45B3B3.png?text=Uranus', orbitalSpeed: 0.06, dataAiHint: 'planet texture uranus', actualRadiusKm: 25362,
+    moons: [
+        { name: 'Miranda', textureUrl: 'https://placehold.co/64x64/DCDCDC/A9A9A9.png?text=Mr', dataAiHint: 'moon chaotic terrain', actualRadiusKm: 236, actualOrbitalRadiusKm: 129390, orbitalSpeedFactor: 1.2 },
+        { name: 'Ariel', textureUrl: 'https://placehold.co/64x64/F0F8FF/B0E0E6.png?text=Ar', dataAiHint: 'moon bright canyons', actualRadiusKm: 579, actualOrbitalRadiusKm: 191020, orbitalSpeedFactor: 1.0 },
+        { name: 'Umbriel', textureUrl: 'https://placehold.co/64x64/A9A9A9/696969.png?text=Um', dataAiHint: 'moon dark cratered', actualRadiusKm: 585, actualOrbitalRadiusKm: 266000, orbitalSpeedFactor: 0.8 },
+        { name: 'Titania', textureUrl: 'https://placehold.co/128x128/E6E6FA/C0C0C0.png?text=Tt', dataAiHint: 'moon large faults', actualRadiusKm: 789, actualOrbitalRadiusKm: 435910, orbitalSpeedFactor: 0.6 },
+        { name: 'Oberon', textureUrl: 'https://placehold.co/128x128/D8BFD8/8B008B.png?text=Ob', dataAiHint: 'moon reddish craters', actualRadiusKm: 761, actualOrbitalRadiusKm: 583520, orbitalSpeedFactor: 0.4 }
+    ]
+  },
+  { 
+    name: 'Neptune', type: 'Planet', gravity: '1.14 G', resources: ['Methane', 'Hydrogen', 'Ice'], terrain: 'Ice Layers', biome: 'Ice Giant', color: 0x3A7CEC, size: 1.7, position: [30.06 * SOLAR_SYSTEM_SCALE_FACTOR, 0, 0], textureUrl: 'https://placehold.co/256x256/3A7CEC/2A588F.png?text=Neptune', orbitalSpeed: 0.05, dataAiHint: 'planet texture neptune', actualRadiusKm: 24622,
+    moons: [
+        { name: 'Proteus', textureUrl: 'https://placehold.co/64x64/808080/505050.png?text=Pr', dataAiHint: 'moon irregular dark', actualRadiusKm: 210, actualOrbitalRadiusKm: 117647, orbitalSpeedFactor: 1.0 },
+        { name: 'Triton', textureUrl: 'https://placehold.co/128x128/FFE4C4/F5DEB3.png?text=Tr', dataAiHint: 'moon cantaloupe terrain', actualRadiusKm: 1353, actualOrbitalRadiusKm: 354759, orbitalSpeedFactor: 0.6, inclination: 2.76 }, // ~158 degrees (retrograde), simplified here
+        { name: 'Nereid', textureUrl: 'https://placehold.co/64x64/ADD8E6/87CEFA.png?text=Nr', dataAiHint: 'moon distant eccentric', actualRadiusKm: 170, actualOrbitalRadiusKm: 5513818, orbitalSpeedFactor: 0.2, inclination: 0.12 } // ~7 degrees
+    ]
+  },
   {
     name: "Halley's Comet", type: 'Comet', gravity: 'Negligible', resources: ['Water Ice', 'Dust'], terrain: 'Icy Nucleus', biome: 'Cometary Coma (active)', color: 0xE0FFFF, size: 0.15, position: [0,0,0], // Dynamic
     textureUrl: 'https://placehold.co/128x128/E0FFFF/666666.png?text=Halley', dataAiHint: 'comet icy rock',
@@ -70,7 +131,7 @@ const solarSystemData: CelestialBodyInfo[] = [
   {
     name: "Pluto", type: 'Dwarf Planet', gravity: '0.063 G', resources: ['Nitrogen Ice', 'Methane Ice', 'Rock'], terrain: 'Mountains, Plains, Glaciers', biome: 'Icy/Rocky', color: 0xDEB887, size: 0.35, position: [0,0,0], // Dynamic
     textureUrl: 'https://placehold.co/128x128/DEB887/8B4513.png?text=Pluto', dataAiHint: 'dwarf planet texture icy rock',
-    description: "Famous dwarf planet with a heart-shaped glacier, thin nitrogen atmosphere, and five known moons. Orbits in the Kuiper Belt.",
+    description: "Famous dwarf planet with a heart-shaped glacier, thin nitrogen atmosphere, and five known moons. Orbits in the Kuiper Belt.", actualRadiusKm: 1188,
     orbitalParams: {
       semiMajorAxis: 39.48 * SOLAR_SYSTEM_SCALE_FACTOR,
       semiMinorAxis: 39.48 * SOLAR_SYSTEM_SCALE_FACTOR * Math.sqrt(1 - 0.2488**2),
@@ -85,7 +146,7 @@ const solarSystemData: CelestialBodyInfo[] = [
   {
     name: "Eris", type: 'Dwarf Planet', gravity: '0.084 G (est.)', resources: ['Methane Ice', 'Rock'], terrain: 'Highly Reflective Surface', biome: 'Icy/Rocky', color: 0xF5F5F5, size: 0.34, position: [0,0,0], // Dynamic
     textureUrl: 'https://placehold.co/128x128/F5F5F5/808080.png?text=Eris', dataAiHint: 'dwarf planet texture icy bright',
-    description: "One of the most massive known dwarf planets, located in the scattered disc beyond the Kuiper Belt. Has one known moon, Dysnomia.",
+    description: "One of the most massive known dwarf planets, located in the scattered disc beyond the Kuiper Belt. Has one known moon, Dysnomia.", actualRadiusKm: 1163,
     orbitalParams: {
       semiMajorAxis: 67.78 * SOLAR_SYSTEM_SCALE_FACTOR,
       semiMinorAxis: 67.78 * SOLAR_SYSTEM_SCALE_FACTOR * Math.sqrt(1 - 0.4359**2),
@@ -141,7 +202,9 @@ export function GalaxyMap() {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
 
-  const planetsRef = useRef<THREE.Mesh[]>([]);
+  const planetsRef = useRef<THREE.Mesh[]>([]); // Holds planet meshes
+  const planetMoonGroupsRef = useRef<Record<string, THREE.Group[]>>({}); // Holds moon groups, keyed by planet name
+
   const asteroidsGroupRef = useRef<THREE.Group | null>(null);
 
   const cometMeshRef = useRef<THREE.Mesh | null>(null);
@@ -184,6 +247,8 @@ export function GalaxyMap() {
 
     const currentMount = mountRef.current;
     planetsRef.current = [];
+    planetMoonGroupsRef.current = {};
+
 
     clockRef.current = new THREE.Clock();
 
@@ -389,7 +454,7 @@ export function GalaxyMap() {
 
 
     solarSystemData.forEach(bodyData => {
-      if ((bodyData.type === 'Comet' || bodyData.type === 'Dwarf Planet') && bodyData.orbitalParams) {
+      if ((bodyData.type === 'Comet' || (bodyData.type === 'Dwarf Planet' && bodyData.name !== 'Ceres' && bodyData.orbitalParams) ) && bodyData.orbitalParams) {
         if (bodyData.name === "Halley's Comet") {
           createOrbitalBody(bodyData, cometMeshRef, cometOrbitCurveRef, cometGroupRef);
         } else if (bodyData.name === "Pluto") {
@@ -397,7 +462,7 @@ export function GalaxyMap() {
         } else if (bodyData.name === "Eris") {
           createOrbitalBody(bodyData, erisMeshRef, erisOrbitCurveRef, erisGroupRef);
         }
-      } else {
+      } else { // Planets, Sun, Ceres (simple orbit), Distant Stars
         const geometry = new THREE.SphereGeometry(bodyData.size, 32, 32);
         const bodyTexture = textureLoader.load(bodyData.textureUrl);
         let material;
@@ -413,7 +478,7 @@ export function GalaxyMap() {
         }
         const bodyMesh = new THREE.Mesh(geometry, material);
         bodyMesh.position.set(...bodyData.position);
-        bodyMesh.userData = { ...bodyData };
+        bodyMesh.userData = { ...bodyData, moonsMeshes: [] }; // Initialize moonsMeshes array for planets
         bodyMesh.name = bodyData.name;
         scene.add(bodyMesh);
 
@@ -448,6 +513,51 @@ export function GalaxyMap() {
           const orbitLineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
           const orbitLine = new THREE.Line(orbitLineGeometry, orbitLineMaterial);
           scene.add(orbitLine);
+        }
+
+        // Create moons for this planet
+        if (bodyData.moons && bodyData.moons.length > 0 && bodyData.actualRadiusKm) {
+          if (!planetMoonGroupsRef.current[bodyData.name]) {
+            planetMoonGroupsRef.current[bodyData.name] = [];
+          }
+          bodyData.moons.forEach(moonData => {
+            const moonSceneSize = (bodyData.size * (moonData.actualRadiusKm / bodyData.actualRadiusKm)) * MOON_SIZE_DISPLAY_SCALE;
+            const moonOrbitSceneRadius = (bodyData.size * (moonData.actualOrbitalRadiusKm / bodyData.actualRadiusKm)) * MOON_ORBIT_DISPLAY_SCALE;
+
+            const moonGeometry = new THREE.SphereGeometry(Math.max(0.02, moonSceneSize), 16, 16); // Min size for visibility
+            const moonTexture = textureLoader.load(moonData.textureUrl);
+            const moonMaterial = new THREE.MeshStandardMaterial({ map: moonTexture, roughness: 0.9, metalness: 0.1 });
+            const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+            moonMesh.name = moonData.name;
+            moonMesh.userData = { // Store data for animation
+              ...moonData,
+              orbitalRadius: moonOrbitSceneRadius,
+              initialAngle: Math.random() * Math.PI * 2, // Random start angle
+              orbitalSpeedFactor: moonData.orbitalSpeedFactor,
+              inclination: moonData.inclination || 0,
+            };
+
+            // Create orbit line for the moon (around the planet)
+            const moonOrbitPointsArr = [];
+            const moonOrbitSegments = 64;
+            for (let i = 0; i <= moonOrbitSegments; i++) {
+                const theta = (i / moonOrbitSegments) * Math.PI * 2;
+                moonOrbitPointsArr.push(new THREE.Vector3(Math.cos(theta) * moonOrbitSceneRadius, 0, Math.sin(theta) * moonOrbitSceneRadius));
+            }
+            const moonOrbitLineGeometry = new THREE.BufferGeometry().setFromPoints(moonOrbitPointsArr);
+            const moonOrbitLineMaterial = new THREE.LineBasicMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0.1 });
+            const moonOrbitLine = new THREE.Line(moonOrbitLineGeometry, moonOrbitLineMaterial);
+            
+            // Moon group to handle inclination
+            const moonGroup = new THREE.Group();
+            moonGroup.add(moonMesh);
+            moonGroup.add(moonOrbitLine);
+            moonGroup.rotation.x = moonData.inclination || 0; // Apply inclination to the whole orbit group
+
+            bodyMesh.add(moonGroup); // Add moon group as a child of the planet mesh
+            (bodyMesh.userData.moonsMeshes as THREE.Mesh[]).push(moonMesh); // Keep track of moon mesh itself for direct access if needed
+            planetMoonGroupsRef.current[bodyData.name].push(moonGroup);
+          });
         }
       }
     });
@@ -487,13 +597,14 @@ export function GalaxyMap() {
       mouse.y = -((event.clientY - rect.top) / currentMount.clientHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
       const intersectableObjects = scene.children.filter(obj =>
-        (obj.userData.name && obj instanceof THREE.Mesh) ||
+        (obj.userData.name && obj instanceof THREE.Mesh && obj.name !== "ISS") || // Exclude clicking ISS mesh for info card for now
         (obj instanceof THREE.Group && [cometGroupRef.current, plutoGroupRef.current, erisGroupRef.current].includes(obj as THREE.Group))
       );
       const intersects = raycaster.intersectObjects(intersectableObjects, true);
 
       if (intersects.length > 0) {
         let clickedObjectOrGroup = intersects[0].object;
+        // Traverse up to find the main celestial body or orbital group that has the userData
         while (clickedObjectOrGroup.parent && clickedObjectOrGroup.parent !== scene && !clickedObjectOrGroup.userData.name) {
             if (cometGroupRef.current && cometGroupRef.current.children.includes(clickedObjectOrGroup) && cometMeshRef.current) {
                  clickedObjectOrGroup = cometMeshRef.current; break;
@@ -507,7 +618,7 @@ export function GalaxyMap() {
             clickedObjectOrGroup = clickedObjectOrGroup.parent as THREE.Object3D;
         }
 
-        if (clickedObjectOrGroup.userData.name) {
+        if (clickedObjectOrGroup.userData.name && clickedObjectOrGroup.userData.type !== "Moon") { // Don't show info card for moons for now
            setSelectedBody(clickedObjectOrGroup.userData as CelestialBodyInfo);
         }
       }
@@ -525,17 +636,36 @@ export function GalaxyMap() {
 
       sceneRef.current.children.forEach(obj => {
         if(obj.userData.name && obj instanceof THREE.Mesh && ![cometMeshRef.current, plutoMeshRef.current, erisMeshRef.current, issMeshRef.current].includes(obj)) {
-          obj.rotation.y += 0.002;
+           // Only apply self-rotation to planets, not sun or distant stars (or moons directly, they rotate with their group)
+           if (obj.userData.type === 'Planet' || (obj.userData.type === 'Dwarf Planet' && obj.name ==='Ceres')) {
+             obj.rotation.y += 0.002;
+           }
         }
       });
 
-      planetsRef.current.forEach(planet => {
-        const P = planet.userData;
+      planetsRef.current.forEach(planetMesh => {
+        const P = planetMesh.userData;
         if (P.orbitalSpeed && P.orbitalRadius !== undefined && P.initialAngle !== undefined) {
           const currentAngle = P.initialAngle + elapsedTime * P.orbitalSpeed * 0.1;
-          planet.position.x = Math.cos(currentAngle) * P.orbitalRadius;
-          planet.position.y = P.initialY;
-          planet.position.z = Math.sin(currentAngle) * P.orbitalRadius;
+          planetMesh.position.x = Math.cos(currentAngle) * P.orbitalRadius;
+          planetMesh.position.y = P.initialY;
+          planetMesh.position.z = Math.sin(currentAngle) * P.orbitalRadius;
+        }
+
+        // Animate moons of this planet
+        const planetMoonsGroups = planetMoonGroupsRef.current[planetMesh.name];
+        if (planetMoonsGroups) {
+          planetMoonsGroups.forEach(moonGroup => {
+            // The moon mesh is the first child of the moonGroup
+            const moonMesh = moonGroup.children[0] as THREE.Mesh;
+            if (moonMesh) {
+                const M = moonMesh.userData;
+                const currentMoonAngle = M.initialAngle + elapsedTime * M.orbitalSpeedFactor * 0.2; // Adjust speed factor as needed
+                moonMesh.position.x = Math.cos(currentMoonAngle) * M.orbitalRadius;
+                moonMesh.position.z = Math.sin(currentMoonAngle) * M.orbitalRadius;
+                moonMesh.rotation.y += 0.005; // Self-rotation for moon
+            }
+          });
         }
       });
 
@@ -567,10 +697,16 @@ export function GalaxyMap() {
           const localPositionOnEllipse2D = curveRefObj.current.getPoint(data.currentU);
           const localPositionOnEllipse = new THREE.Vector3(localPositionOnEllipse2D.x, localPositionOnEllipse2D.y, 0);
 
-          groupRefObj.current.updateMatrixWorld(true);
-          const worldPositionVec3 = localPositionOnEllipse.clone().applyMatrix4(groupRefObj.current.matrixWorld);
+          groupRefObj.current.updateMatrixWorld(true); // Ensure matrix is up-to-date
+          // This gives the position of the mesh *relative to the sun* if the group is at origin and only rotated.
+          // If the group itself was translated, this would be relative to the group's origin in world space.
+          // Here, group is at origin, rotated by inclination. Mesh position is on the ellipse within that rotated plane.
+          
+          // To get world position *of the mesh*:
+          const worldPositionOfMesh = new THREE.Vector3();
+          mesh.getWorldPosition(worldPositionOfMesh); // This considers the group's rotation.
 
-          const distanceToSun = worldPositionVec3.distanceTo(sunPosition);
+          const distanceToSun = worldPositionOfMesh.distanceTo(sunPosition); // Correctly use world position for distance calculation.
 
           const minSpeedFactor = 0.0005 / (params.orbitalPeriodYears / 76) ;
           const maxSpeedFactor = 0.1 / (params.orbitalPeriodYears / 76);
@@ -657,7 +793,7 @@ export function GalaxyMap() {
       issMeshRef.current?.geometry?.dispose();
       (issMeshRef.current?.material as THREE.Material)?.dispose();
       issMeshRef.current = null;
-      earthMeshRef.current = null;
+      // earthMeshRef is disposed with other planets
 
 
       if (rendererRef.current && currentMount.contains(rendererRef.current.domElement)) {
@@ -733,7 +869,7 @@ export function GalaxyMap() {
 
       if (sceneRef.current) {
         sceneRef.current.traverse(object => {
-           if (object instanceof THREE.Mesh && ![cometMeshRef.current, plutoMeshRef.current, erisMeshRef.current, issMeshRef.current].includes(object)) { // Also exclude ISS mesh from general disposal if it's managed separately by its ref
+           if (object instanceof THREE.Mesh && ![cometMeshRef.current, plutoMeshRef.current, erisMeshRef.current, issMeshRef.current].includes(object)) {
                 if (object.geometry) object.geometry.dispose();
                 if (Array.isArray(object.material)) {
                     object.material.forEach(material => {
@@ -744,6 +880,25 @@ export function GalaxyMap() {
                     if ((object.material as THREE.MeshStandardMaterial).map) (object.material as THREE.MeshStandardMaterial).map?.dispose();
                     (object.material as THREE.Material).dispose();
                 }
+                // Dispose moons attached to this planet
+                if (planetMoonGroupsRef.current[object.name]) {
+                    planetMoonGroupsRef.current[object.name].forEach(moonGroup => {
+                        moonGroup.traverse(moonObject => {
+                            if (moonObject instanceof THREE.Mesh) {
+                                if (moonObject.geometry) moonObject.geometry.dispose();
+                                if (moonObject.material && (moonObject.material as THREE.MeshStandardMaterial).map) {
+                                    (moonObject.material as THREE.MeshStandardMaterial).map?.dispose();
+                                }
+                                if (moonObject.material) (moonObject.material as THREE.Material).dispose();
+                            } else if (moonObject instanceof THREE.Line) {
+                                if (moonObject.geometry) moonObject.geometry.dispose();
+                                if (moonObject.material) (moonObject.material as THREE.Material).dispose();
+                            }
+                        });
+                        object.remove(moonGroup); // Remove from parent before scene removal
+                    });
+                }
+
             } else if (object instanceof THREE.Line) {
                  if (object.geometry) object.geometry.dispose();
                  if (object.material) (object.material as THREE.Material).dispose();
@@ -754,35 +909,32 @@ export function GalaxyMap() {
         });
       }
       planetsRef.current = [];
+      planetMoonGroupsRef.current = {};
+      earthMeshRef.current = null; // Clear Earth ref specifically
       if (rendererRef.current) rendererRef.current.dispose();
       rendererRef.current = null;
       sceneRef.current = null;
     };
-  }, []); // Empty dependency array means this runs once on mount and cleanup on unmount
+  }, []); 
 
-  // useEffect for updating ISS position
   useEffect(() => {
     if (issData && earthMeshRef.current && sceneRef.current) {
       if (!issMeshRef.current) {
-        const issGeometry = new THREE.SphereGeometry(0.03, 16, 16); // Small sphere for ISS
+        const issGeometry = new THREE.SphereGeometry(0.03, 16, 16); 
         const issMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2, toneMapped: false });
         issMeshRef.current = new THREE.Mesh(issGeometry, issMaterial);
         issMeshRef.current.name = "ISS";
         issMeshRef.current.userData = { name: "ISS", type: "Satellite", dataAiHint: "satellite space station" };
-        earthMeshRef.current.add(issMeshRef.current); // Add ISS as child of Earth
+        earthMeshRef.current.add(issMeshRef.current); 
       }
 
-      const earthModelRadius = 1.0; // Earth's 'size' in solarSystemData
+      const earthModelRadius = earthMeshRef.current.userData.size || 1.0; 
       const altitudeInSceneUnits = (issData.altitude / EARTH_RADIUS_KM) * earthModelRadius;
       const totalRadius = earthModelRadius + altitudeInSceneUnits;
 
       const latRad = issData.latitude * (Math.PI / 180);
       const lonRad = issData.longitude * (Math.PI / 180);
 
-      // Y-up coordinate system:
-      // x = R * cos(lat) * sin(lon)
-      // y = R * sin(lat)
-      // z = R * cos(lat) * cos(lon)
       const x = totalRadius * Math.cos(latRad) * Math.sin(lonRad);
       const y = totalRadius * Math.sin(latRad);
       const z = totalRadius * Math.cos(latRad) * Math.cos(lonRad);
@@ -793,7 +945,7 @@ export function GalaxyMap() {
     } else if (issMeshRef.current) {
       issMeshRef.current.visible = false;
     }
-  }, [issData]); // Rerun when issData changes
+  }, [issData]); 
 
 
   const zoom = (factor: number) => {
@@ -814,7 +966,7 @@ export function GalaxyMap() {
 
   return (
     <div className="relative w-full h-[calc(100vh-10rem)] rounded-lg overflow-hidden border border-primary/30 shadow-2xl shadow-primary/20">
-      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets dwarf planets comet proxima centauri milky way galaxy international space station" />
+      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets moons dwarf planets comet proxima centauri milky way galaxy international space station" />
       <div className="absolute top-4 right-4 flex flex-col gap-2">
         <Button size="icon" onClick={() => zoom(1.2)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomInIcon className="w-5 h-5" /></Button>
         <Button size="icon" onClick={() => zoom(0.8)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomOutIcon className="w-5 h-5" /></Button>
@@ -843,7 +995,7 @@ export function GalaxyMap() {
                 <p><strong>Key Resources:</strong> {selectedBody.resources.join(', ')}</p>
                 <p><strong>Terrain Type:</strong> {selectedBody.terrain}</p>
                 <p><strong>Primary Biome:</strong> {selectedBody.biome}</p>
-                {(selectedBody.type === 'Comet' || (selectedBody.type === 'Dwarf Planet' && selectedBody.orbitalParams)) && selectedBody.orbitalParams && (
+                {(selectedBody.type === 'Comet' || (selectedBody.type === 'Dwarf Planet' && selectedBody.name !== 'Ceres' && selectedBody.orbitalParams)) && selectedBody.orbitalParams && (
                   <>
                     <hr className="my-2 border-primary/30" />
                     <p><strong>Perihelion:</strong> {(selectedBody.orbitalParams.perihelionDistance / SOLAR_SYSTEM_SCALE_FACTOR).toFixed(2)} AU</p>
@@ -852,12 +1004,18 @@ export function GalaxyMap() {
                     <p><strong>Inclination:</strong> {(selectedBody.orbitalParams.inclination * (180 / Math.PI)).toFixed(1)}°</p>
                   </>
                 )}
-                 {selectedBody.type === 'Dwarf Planet' && !selectedBody.orbitalParams && selectedBody.orbitalSpeed && (
+                 {selectedBody.type === 'Dwarf Planet' && selectedBody.name === 'Ceres' && !selectedBody.orbitalParams && selectedBody.orbitalSpeed && (
                     <>
                      <hr className="my-2 border-primary/30" />
                      <p><strong>Avg Orbital Distance:</strong> {(selectedBody.position[0] / SOLAR_SYSTEM_SCALE_FACTOR).toFixed(2)} AU</p>
                     </>
                  )}
+                  {selectedBody.type === 'Planet' && selectedBody.moons && selectedBody.moons.length > 0 && (
+                    <>
+                        <hr className="my-2 border-primary/30" />
+                        <p><strong>Major Moons:</strong> {selectedBody.moons.map(m => m.name).join(', ')}</p>
+                    </>
+                  )}
               </CardContent>
             </Card>
           </motion.div>
@@ -871,4 +1029,3 @@ export function GalaxyMap() {
     </div>
   );
 }
-
