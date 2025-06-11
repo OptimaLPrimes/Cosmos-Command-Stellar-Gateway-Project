@@ -23,14 +23,14 @@ interface OrbitalParams {
 
 interface CelestialBodyInfo {
   name: string;
-  type: 'Star' | 'Planet' | 'Dwarf Planet' | 'Comet' | 'Distant Star';
+  type: 'Star' | 'Planet' | 'Dwarf Planet' | 'Comet' | 'Distant Star' | 'Moon' | 'Satellite';
   gravity: string;
   resources: string[];
   terrain: string;
   biome: string;
   color: number;
   size: number;
-  position: [number, number, number]; 
+  position: [number, number, number];
   textureUrl: string;
   dataAiHint?: string;
   orbitalSpeed?: number; // For planets & simple orbits
@@ -40,6 +40,7 @@ interface CelestialBodyInfo {
 }
 
 const SOLAR_SYSTEM_SCALE_FACTOR = 20; // 1 AU = 20 units in the scene
+const EARTH_RADIUS_KM = 6371; // Approximate radius of Earth in km
 
 const solarSystemData: CelestialBodyInfo[] = [
   { name: 'Sun', type: 'Star', gravity: '274.0 m/s²', resources: ['Helium', 'Hydrogen'], terrain: 'Plasma', biome: 'Star', color: 0xFFD700, size: 4.0, position: [0,0,0], textureUrl: 'https://placehold.co/256x256/FFA500/DC143C.png?text=Sun+Surface', dataAiHint: 'sun plasma' },
@@ -59,10 +60,10 @@ const solarSystemData: CelestialBodyInfo[] = [
       semiMajorAxis: 17.834 * SOLAR_SYSTEM_SCALE_FACTOR, // a
       eccentricity: 0.967, // e
       semiMinorAxis: (17.834 * SOLAR_SYSTEM_SCALE_FACTOR) * Math.sqrt(1 - 0.967**2),
-      inclination: 162.26 * (Math.PI / 180), 
+      inclination: 162.26 * (Math.PI / 180),
       perihelionDistance: 0.586 * SOLAR_SYSTEM_SCALE_FACTOR,
       aphelionDistance: 35.082 * SOLAR_SYSTEM_SCALE_FACTOR,
-      ellipseCX: -(17.834 * SOLAR_SYSTEM_SCALE_FACTOR * 0.967), 
+      ellipseCX: -(17.834 * SOLAR_SYSTEM_SCALE_FACTOR * 0.967),
       orbitalPeriodYears: 76,
     }
   },
@@ -96,32 +97,41 @@ const solarSystemData: CelestialBodyInfo[] = [
       orbitalPeriodYears: 559,
     }
   },
-  { 
-    name: 'Proxima Centauri', type: 'Distant Star', gravity: 'N/A (Stellar)', resources: ['Hydrogen', 'Helium'], terrain: 'Red Dwarf Star', biome: 'Star System', color: 0xFF6347, size: 5.0, position: [5000, 500, 0], 
-    textureUrl: 'https://placehold.co/64x64/FF6347/8B0000.png?text=P', dataAiHint: 'red dwarf star', 
+  {
+    name: 'Proxima Centauri', type: 'Distant Star', gravity: 'N/A (Stellar)', resources: ['Hydrogen', 'Helium'], terrain: 'Red Dwarf Star', biome: 'Star System', color: 0xFF6347, size: 5.0, position: [5000, 500, 0],
+    textureUrl: 'https://placehold.co/64x64/FF6347/8B0000.png?text=P', dataAiHint: 'red dwarf star',
     description: "Closest known star to the Sun (approx. 4.24 light-years away). A red dwarf, part of the Alpha Centauri triple star system."
   },
 ];
 
 const ASTEROID_COUNT = 1000;
-const ASTEROID_BELT_INNER_RADIUS = 2.2 * SOLAR_SYSTEM_SCALE_FACTOR; 
-const ASTEROID_BELT_OUTER_RADIUS = 3.2 * SOLAR_SYSTEM_SCALE_FACTOR; 
-const ASTEROID_BELT_THICKNESS = 1.5 * (SOLAR_SYSTEM_SCALE_FACTOR / 20); 
+const ASTEROID_BELT_INNER_RADIUS = 2.2 * SOLAR_SYSTEM_SCALE_FACTOR;
+const ASTEROID_BELT_OUTER_RADIUS = 3.2 * SOLAR_SYSTEM_SCALE_FACTOR;
+const ASTEROID_BELT_THICKNESS = 1.5 * (SOLAR_SYSTEM_SCALE_FACTOR / 20);
 
 const EXISTING_STAR_COUNT = 5000;
 
-const GALAXY_PARTICLE_COUNT = 35000; 
+const GALAXY_PARTICLE_COUNT = 35000;
 const GALAXY_RADIUS = 1500;
-const GALAXY_CORE_BULGE_RADIUS = GALAXY_RADIUS * 0.15; 
+const GALAXY_CORE_BULGE_RADIUS = GALAXY_RADIUS * 0.15;
 const GALAXY_BAR_LENGTH = GALAXY_RADIUS * 0.5;
 const GALAXY_BAR_WIDTH = GALAXY_RADIUS * 0.1;
-const GALAXY_THICKNESS = 70; 
-const GALAXY_PARTICLE_SIZE = 4.5; 
+const GALAXY_THICKNESS = 70;
+const GALAXY_PARTICLE_SIZE = 4.5;
 const GALAXY_VISIBILITY_START_DISTANCE = 300;
 const GALAXY_VISIBILITY_FULL_DISTANCE = 900;
 const CONTROLS_MAX_DISTANCE = 7000;
 const CAMERA_FAR_PLANE = 10000;
 
+interface ISSData {
+  latitude: number;
+  longitude: number;
+  altitude: number;
+  velocity: number;
+  visibility: string;
+  timestamp: number;
+  units: string;
+}
 
 export function GalaxyMap() {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -130,10 +140,10 @@ export function GalaxyMap() {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
-  
-  const planetsRef = useRef<THREE.Mesh[]>([]); 
+
+  const planetsRef = useRef<THREE.Mesh[]>([]);
   const asteroidsGroupRef = useRef<THREE.Group | null>(null);
-  
+
   const cometMeshRef = useRef<THREE.Mesh | null>(null);
   const cometOrbitCurveRef = useRef<THREE.EllipseCurve | null>(null);
   const cometGroupRef = useRef<THREE.Group | null>(null);
@@ -161,12 +171,19 @@ export function GalaxyMap() {
   const milkyWayGeometryRef = useRef<THREE.BufferGeometry | null>(null);
   const milkyWayMaterialRef = useRef<THREE.PointsMaterial | null>(null);
 
+  // ISS specific refs and state
+  const earthMeshRef = useRef<THREE.Mesh | null>(null);
+  const issMeshRef = useRef<THREE.Mesh | null>(null);
+  const [issData, setIssData] = useState<ISSData | null>(null);
+  const [issError, setIssError] = useState<string | null>(null);
+  const issFetchIntervalIdRef = useRef<NodeJS.Timeout | null>(null);
+
 
   useEffect(() => {
     if (!mountRef.current) return;
 
     const currentMount = mountRef.current;
-    planetsRef.current = []; 
+    planetsRef.current = [];
 
     clockRef.current = new THREE.Clock();
 
@@ -175,7 +192,7 @@ export function GalaxyMap() {
     scene.background = new THREE.Color(0x050005);
 
     const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, CAMERA_FAR_PLANE);
-    camera.position.set(0, 45, 60); 
+    camera.position.set(0, 45, 60);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -190,34 +207,34 @@ export function GalaxyMap() {
     controls.minDistance = 1;
     controls.maxDistance = CONTROLS_MAX_DISTANCE;
     controlsRef.current = controls;
-    
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
-    const pointLight = new THREE.PointLight(0xffffff, 4.5, SOLAR_SYSTEM_SCALE_FACTOR * 6); 
-    pointLight.position.set(0, 0, 0); 
+    const pointLight = new THREE.PointLight(0xffffff, 4.5, SOLAR_SYSTEM_SCALE_FACTOR * 10); // Sun light
+    pointLight.position.set(0, 0, 0);
     scene.add(pointLight);
 
     if (!starGeometryRef.current) starGeometryRef.current = new THREE.BufferGeometry();
     if (!starMaterialRef.current) starMaterialRef.current = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, sizeAttenuation: true, transparent: true, opacity: 0.7 });
-    
+
     const neptuneData = solarSystemData.find(body => body.name === 'Neptune');
     const neptuneOrbitRadius = neptuneData ? neptuneData.position[0] : (30 * SOLAR_SYSTEM_SCALE_FACTOR);
 
 
     const starVertices = [];
     for (let i = 0; i < EXISTING_STAR_COUNT; i++) {
-      const x = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2.5); 
+      const x = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2.5);
       const y = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2.5);
       const z = (Math.random() - 0.5) * (CONTROLS_MAX_DISTANCE * 2.5);
       const dist = Math.sqrt(x*x + y*y + z*z);
-      if (dist > (neptuneOrbitRadius * 1.2) && dist < CAMERA_FAR_PLANE * 0.9) { 
+      if (dist > (neptuneOrbitRadius * 1.2) && dist < CAMERA_FAR_PLANE * 0.9) {
          starVertices.push(x, y, z);
       }
     }
     starGeometryRef.current.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
     backgroundStars = new THREE.Points(starGeometryRef.current, starMaterialRef.current);
     scene.add(backgroundStars);
-    
+
     const textureLoader = new THREE.TextureLoader();
 
     const galaxyVerticesArray: number[] = [];
@@ -228,87 +245,87 @@ export function GalaxyMap() {
         let x_pos, y_pos, z_pos;
         const randVal = Math.random();
         let isArmParticle = false;
-  
-        if (randVal < 0.2) { 
+
+        if (randVal < 0.2) {
           const r = Math.random() * GALAXY_CORE_BULGE_RADIUS;
           const theta_core = Math.random() * 2 * Math.PI;
-          const phi_core = Math.acos(2 * Math.random() - 1); 
+          const phi_core = Math.acos(2 * Math.random() - 1);
           x_pos = r * Math.sin(phi_core) * Math.cos(theta_core);
           z_pos = r * Math.sin(phi_core) * Math.sin(theta_core);
-          y_pos = r * Math.cos(phi_core) * 0.5; 
+          y_pos = r * Math.cos(phi_core) * 0.5;
           galaxyColor.setHSL( (0.07 + Math.random() * 0.06), (0.95 + Math.random() * 0.1), (0.65 + Math.random() * 0.1) );
-        
-        } else if (randVal < 0.45) { 
+
+        } else if (randVal < 0.45) {
           x_pos = (Math.random() - 0.5) * GALAXY_BAR_LENGTH;
-          const barTaperFactorX = 1 - Math.pow(Math.abs(x_pos) / (GALAXY_BAR_LENGTH / 2 + 1e-6), 1.2); 
-          z_pos = (Math.random() - 0.5) * GALAXY_BAR_WIDTH * Math.max(0.1, barTaperFactorX); 
-          
+          const barTaperFactorX = 1 - Math.pow(Math.abs(x_pos) / (GALAXY_BAR_LENGTH / 2 + 1e-6), 1.2);
+          z_pos = (Math.random() - 0.5) * GALAXY_BAR_WIDTH * Math.max(0.1, barTaperFactorX);
+
           const currentMaxZAtX = (GALAXY_BAR_WIDTH / 2) * Math.max(0.1, barTaperFactorX);
-          const normalizedZInBar = Math.min(1.0, Math.abs(z_pos) / (currentMaxZAtX + 1e-6)); 
-          const barTaperFactorZ_forYthickness = 1 - Math.pow(normalizedZInBar, 1.5); 
+          const normalizedZInBar = Math.min(1.0, Math.abs(z_pos) / (currentMaxZAtX + 1e-6));
+          const barTaperFactorZ_forYthickness = 1 - Math.pow(normalizedZInBar, 1.5);
 
           const combinedTaperForY = barTaperFactorX * barTaperFactorZ_forYthickness;
-          y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * 0.35 * Math.max(0.05, combinedTaperForY); 
-          
+          y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * 0.35 * Math.max(0.05, combinedTaperForY);
+
           galaxyColor.setHSL( (0.09 + Math.random() * 0.05), (0.90 + Math.random() * 0.1), (0.75 + Math.random() * 0.08) );
-        
-        } else { 
+
+        } else {
           isArmParticle = true;
-          let r_disk = Math.pow(Math.random(), 0.7) * GALAXY_RADIUS; 
+          let r_disk = Math.pow(Math.random(), 0.7) * GALAXY_RADIUS;
           let theta_disk = Math.random() * 2 * Math.PI;
-  
-          const numArms = 2; 
-          const armTightness = 2.0; 
+
+          const numArms = 2;
+          const armTightness = 2.0;
           let armPhase = (r_disk / GALAXY_RADIUS) * numArms * Math.PI * armTightness;
-          
+
           const barInfluenceFactor = Math.max(0, 1 - (r_disk / (GALAXY_BAR_LENGTH * 0.75)));
-          const angleOffsetFromBar = Math.PI / numArms; 
-          
+          const angleOffsetFromBar = Math.PI / numArms;
+
           theta_disk += armPhase + (Math.floor(theta_disk / (Math.PI / numArms)) % numArms) * angleOffsetFromBar * barInfluenceFactor;
-          
+
           const disturbanceMagnitudeBase = (r_disk / GALAXY_RADIUS) * (GALAXY_RADIUS * 0.045);
           const disturbanceMagnitudeRandom = Math.random() * GALAXY_RADIUS * 0.01;
           const disturbanceMagnitude = disturbanceMagnitudeBase + disturbanceMagnitudeRandom;
           x_pos = r_disk * Math.cos(theta_disk) + (Math.random() - 0.5) * disturbanceMagnitude;
           z_pos = r_disk * Math.sin(theta_disk) + (Math.random() - 0.5) * disturbanceMagnitude;
-          
+
           const diskThicknessFactor = 0.15 + 0.35 * (1 - r_disk / GALAXY_RADIUS) + 0.1 * barInfluenceFactor;
           y_pos = (Math.random() - 0.5) * GALAXY_THICKNESS * diskThicknessFactor;
-  
-          const phaseSegment = (armPhase / (Math.PI * 0.5)) % 2; 
-          const localColorTypeRand = Math.random();
-          const saturation = 0.95 + Math.random() * 0.1; 
-          const lightnessMod = (Math.random() - 0.5) * 0.15; 
 
-          if (phaseSegment < 1) { 
-            if (localColorTypeRand < 0.65) { 
-              galaxyColor.setHSL(0.58 + Math.random() * 0.12, saturation, 0.70 + lightnessMod * 0.9); 
-            } else if (localColorTypeRand < 0.90) { 
+          const phaseSegment = (armPhase / (Math.PI * 0.5)) % 2;
+          const localColorTypeRand = Math.random();
+          const saturation = 0.95 + Math.random() * 0.1;
+          const lightnessMod = (Math.random() - 0.5) * 0.15;
+
+          if (phaseSegment < 1) {
+            if (localColorTypeRand < 0.65) {
+              galaxyColor.setHSL(0.58 + Math.random() * 0.12, saturation, 0.70 + lightnessMod * 0.9);
+            } else if (localColorTypeRand < 0.90) {
               galaxyColor.setHSL(0.83 + Math.random() * 0.12, saturation, 0.65 + lightnessMod * 0.9);
-            } else { 
-              galaxyColor.setHSL(0.10 + Math.random() * 0.1, saturation, 0.90 + Math.random() * 0.15); 
+            } else {
+              galaxyColor.setHSL(0.10 + Math.random() * 0.1, saturation, 0.90 + Math.random() * 0.15);
             }
-          } else { 
-            if (localColorTypeRand < 0.25) { 
-              galaxyColor.setHSL(0.58 + Math.random() * 0.12, saturation, 0.70 + lightnessMod * 0.9); 
-            } else if (localColorTypeRand < 0.90) { 
+          } else {
+            if (localColorTypeRand < 0.25) {
+              galaxyColor.setHSL(0.58 + Math.random() * 0.12, saturation, 0.70 + lightnessMod * 0.9);
+            } else if (localColorTypeRand < 0.90) {
               galaxyColor.setHSL(0.83 + Math.random() * 0.12, saturation, 0.65 + lightnessMod * 0.9);
-            } else { 
+            } else {
               galaxyColor.setHSL(0.10 + Math.random() * 0.1, saturation, 0.90 + Math.random() * 0.15);
             }
           }
         }
-        
-        y_pos += (Math.random() - 0.5) * GALAXY_THICKNESS * 0.05; 
+
+        y_pos += (Math.random() - 0.5) * GALAXY_THICKNESS * 0.05;
 
         const distSq = x_pos * x_pos + z_pos * z_pos;
         if (distSq > GALAXY_RADIUS * GALAXY_RADIUS && isArmParticle) {
           const dist = Math.sqrt(distSq);
-          const scale = (GALAXY_RADIUS / dist) * (0.95 + Math.random() * 0.05); 
+          const scale = (GALAXY_RADIUS / dist) * (0.95 + Math.random() * 0.05);
           x_pos *= scale;
           z_pos *= scale;
         }
-  
+
         galaxyVerticesArray.push(x_pos, y_pos, z_pos);
         galaxyColorsArray.push(galaxyColor.r, galaxyColor.g, galaxyColor.b);
       }
@@ -316,14 +333,14 @@ export function GalaxyMap() {
     if (!milkyWayGeometryRef.current) milkyWayGeometryRef.current = new THREE.BufferGeometry();
     milkyWayGeometryRef.current.setAttribute('position', new THREE.Float32BufferAttribute(galaxyVerticesArray, 3));
     milkyWayGeometryRef.current.setAttribute('color', new THREE.Float32BufferAttribute(galaxyColorsArray, 3));
-    
+
     if (!milkyWayMaterialRef.current) {
         milkyWayMaterialRef.current = new THREE.PointsMaterial({
         size: GALAXY_PARTICLE_SIZE,
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: 0, 
+        opacity: 0,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
         });
@@ -333,29 +350,29 @@ export function GalaxyMap() {
     scene.add(milkyWay);
     milkyWayParticlesRef.current = milkyWay;
 
-    const createOrbitalBody = (bodyData: CelestialBodyInfo, meshRef: React.MutableRefObject<THREE.Mesh | null>, curveRef: React.MutableRefObject<THREE.EllipseCurve | null>, groupRef: React.MutableRefObject<THREE.Group | null>) => {
+    const createOrbitalBody = (bodyData: CelestialBodyInfo, meshRefObj: React.MutableRefObject<THREE.Mesh | null>, curveRefObj: React.MutableRefObject<THREE.EllipseCurve | null>, groupRefObj: React.MutableRefObject<THREE.Group | null>) => {
       if (!bodyData.orbitalParams) return;
       const params = bodyData.orbitalParams;
       const nucleusGeo = new THREE.SphereGeometry(bodyData.size, 16, 16);
       const nucleusMat = new THREE.MeshStandardMaterial({
-        map: textureLoader.load(bodyData.textureUrl), 
+        map: textureLoader.load(bodyData.textureUrl),
         emissive: bodyData.color,
         emissiveIntensity: 0.3,
-        roughness: 0.8, 
-        metalness: 0.1, 
+        roughness: 0.8,
+        metalness: 0.1,
       });
       const mesh = new THREE.Mesh(nucleusGeo, nucleusMat);
-      mesh.userData = { ...bodyData, currentU: Math.random() }; 
+      mesh.userData = { ...bodyData, currentU: Math.random() };
       mesh.name = bodyData.name;
-      meshRef.current = mesh;
+      meshRefObj.current = mesh;
 
       const curve = new THREE.EllipseCurve(
-        params.ellipseCX, 0, 
+        params.ellipseCX, 0,
         params.semiMajorAxis, params.semiMinorAxis,
         0, 2 * Math.PI, false, 0
       );
-      curveRef.current = curve;
-      
+      curveRefObj.current = curve;
+
       const points = curve.getPoints(256);
       const orbitPoints3D = points.map(p => new THREE.Vector3(p.x, p.y, 0));
       const orbitGeom = new THREE.BufferGeometry().setFromPoints(orbitPoints3D);
@@ -367,7 +384,7 @@ export function GalaxyMap() {
       group.add(orbitLine);
       group.rotation.x = params.inclination;
       scene.add(group);
-      groupRef.current = group;
+      groupRefObj.current = group;
     };
 
 
@@ -380,34 +397,38 @@ export function GalaxyMap() {
         } else if (bodyData.name === "Eris") {
           createOrbitalBody(bodyData, erisMeshRef, erisOrbitCurveRef, erisGroupRef);
         }
-      } else { 
+      } else {
         const geometry = new THREE.SphereGeometry(bodyData.size, 32, 32);
         const bodyTexture = textureLoader.load(bodyData.textureUrl);
         let material;
 
-        if (bodyData.type === 'Star' || bodyData.type === 'Distant Star') { 
+        if (bodyData.type === 'Star' || bodyData.type === 'Distant Star') {
           material = new THREE.MeshBasicMaterial({ map: bodyTexture, emissive: bodyData.color, emissiveIntensity: bodyData.type === 'Distant Star' ? 5.0 : 1.5 });
-        } else { 
-          material = new THREE.MeshStandardMaterial({ 
-            map: bodyTexture, 
-            roughness: 0.8,   
-            metalness: 0.1    
+        } else {
+          material = new THREE.MeshStandardMaterial({
+            map: bodyTexture,
+            roughness: 0.8,
+            metalness: 0.1
           });
         }
         const bodyMesh = new THREE.Mesh(geometry, material);
         bodyMesh.position.set(...bodyData.position);
         bodyMesh.userData = { ...bodyData };
-        bodyMesh.name = bodyData.name; 
+        bodyMesh.name = bodyData.name;
         scene.add(bodyMesh);
+
+        if (bodyData.name === 'Earth') {
+          earthMeshRef.current = bodyMesh; // Store reference to Earth mesh
+        }
 
         if (bodyData.name === 'Saturn' && bodyData.ringTextureUrl) {
           const ringTexture = textureLoader.load(bodyData.ringTextureUrl);
           const ringGeometry = new THREE.RingGeometry(bodyData.size * 1.2, bodyData.size * 2.2, 64);
           const ringMaterial = new THREE.MeshBasicMaterial({ map: ringTexture, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
           const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
-          ringMesh.rotation.x = Math.PI * 0.45; 
-          ringMesh.userData.dataAiHint = "planet rings"; 
-          bodyMesh.add(ringMesh); 
+          ringMesh.rotation.x = Math.PI * 0.45;
+          ringMesh.userData.dataAiHint = "planet rings";
+          bodyMesh.add(ringMesh);
         }
 
         if ((bodyData.type === 'Planet' || (bodyData.type === 'Dwarf Planet' && bodyData.name === 'Ceres')) && bodyData.orbitalSpeed) {
@@ -417,13 +438,13 @@ export function GalaxyMap() {
           planetsRef.current.push(bodyMesh);
 
           const orbitRadius = bodyMesh.userData.orbitalRadius;
-          const orbitPoints = [];
+          const orbitPointsArr = [];
           const segments = 128;
           for (let i = 0; i <= segments; i++) {
               const theta = (i / segments) * Math.PI * 2;
-              orbitPoints.push(new THREE.Vector3(Math.cos(theta) * orbitRadius, bodyData.position[1], Math.sin(theta) * orbitRadius));
+              orbitPointsArr.push(new THREE.Vector3(Math.cos(theta) * orbitRadius, bodyData.position[1], Math.sin(theta) * orbitRadius));
           }
-          const orbitLineGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+          const orbitLineGeometry = new THREE.BufferGeometry().setFromPoints(orbitPointsArr);
           const orbitLineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
           const orbitLine = new THREE.Line(orbitLineGeometry, orbitLineMaterial);
           scene.add(orbitLine);
@@ -432,19 +453,19 @@ export function GalaxyMap() {
     });
 
     if (!asteroidsGroupRef.current) asteroidsGroupRef.current = new THREE.Group();
-    if (!asteroidGeometryRef.current) asteroidGeometryRef.current = new THREE.DodecahedronGeometry(1, 0); 
-    if (!asteroidTextureRef.current) asteroidTextureRef.current = textureLoader.load('https://placehold.co/128x128/A9A9A9/696969.png?text=Rock'); 
-    if (!asteroidMaterialRef.current) asteroidMaterialRef.current = new THREE.MeshStandardMaterial({ 
-        map: asteroidTextureRef.current, 
-        roughness: 0.9, 
-        metalness: 0.1 
+    if (!asteroidGeometryRef.current) asteroidGeometryRef.current = new THREE.DodecahedronGeometry(1, 0);
+    if (!asteroidTextureRef.current) asteroidTextureRef.current = textureLoader.load('https://placehold.co/128x128/A9A9A9/696969.png?text=Rock');
+    if (!asteroidMaterialRef.current) asteroidMaterialRef.current = new THREE.MeshStandardMaterial({
+        map: asteroidTextureRef.current,
+        roughness: 0.9,
+        metalness: 0.1
     });
 
     for (let i = 0; i < ASTEROID_COUNT; i++) {
       if (!asteroidGeometryRef.current || !asteroidMaterialRef.current) continue;
       const asteroidMesh = new THREE.Mesh(asteroidGeometryRef.current, asteroidMaterialRef.current);
-      const size = Math.random() * 0.3 + 0.08; 
-      asteroidMesh.scale.set(size, size, size * (Math.random() * 0.5 + 0.75)); 
+      const size = Math.random() * 0.3 + 0.08;
+      asteroidMesh.scale.set(size, size, size * (Math.random() * 0.5 + 0.75));
       const radius = ASTEROID_BELT_INNER_RADIUS + Math.random() * (ASTEROID_BELT_OUTER_RADIUS - ASTEROID_BELT_INNER_RADIUS);
       const angle = Math.random() * Math.PI * 2;
       const x = Math.cos(angle) * radius;
@@ -465,12 +486,12 @@ export function GalaxyMap() {
       mouse.x = ((event.clientX - rect.left) / currentMount.clientWidth) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / currentMount.clientHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
-      const intersectableObjects = scene.children.filter(obj => 
-        (obj.userData.name && obj instanceof THREE.Mesh) || 
+      const intersectableObjects = scene.children.filter(obj =>
+        (obj.userData.name && obj instanceof THREE.Mesh) ||
         (obj instanceof THREE.Group && [cometGroupRef.current, plutoGroupRef.current, erisGroupRef.current].includes(obj as THREE.Group))
       );
-      const intersects = raycaster.intersectObjects(intersectableObjects, true); 
-      
+      const intersects = raycaster.intersectObjects(intersectableObjects, true);
+
       if (intersects.length > 0) {
         let clickedObjectOrGroup = intersects[0].object;
         while (clickedObjectOrGroup.parent && clickedObjectOrGroup.parent !== scene && !clickedObjectOrGroup.userData.name) {
@@ -496,24 +517,24 @@ export function GalaxyMap() {
     const animate = () => {
       if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !controlsRef.current || !clockRef.current) return;
       requestAnimationFrame(animate);
-      
+
       const deltaTime = clockRef.current.getDelta();
       const elapsedTime = clockRef.current.getElapsedTime();
 
       controlsRef.current.update();
-      
+
       sceneRef.current.children.forEach(obj => {
-        if(obj.userData.name && obj instanceof THREE.Mesh && ![cometMeshRef.current, plutoMeshRef.current, erisMeshRef.current].includes(obj)) { 
-          obj.rotation.y += 0.002; 
+        if(obj.userData.name && obj instanceof THREE.Mesh && ![cometMeshRef.current, plutoMeshRef.current, erisMeshRef.current, issMeshRef.current].includes(obj)) {
+          obj.rotation.y += 0.002;
         }
       });
 
-      planetsRef.current.forEach(planet => { 
+      planetsRef.current.forEach(planet => {
         const P = planet.userData;
         if (P.orbitalSpeed && P.orbitalRadius !== undefined && P.initialAngle !== undefined) {
-          const currentAngle = P.initialAngle + elapsedTime * P.orbitalSpeed * 0.1; 
+          const currentAngle = P.initialAngle + elapsedTime * P.orbitalSpeed * 0.1;
           planet.position.x = Math.cos(currentAngle) * P.orbitalRadius;
-          planet.position.y = P.initialY; 
+          planet.position.y = P.initialY;
           planet.position.z = Math.sin(currentAngle) * P.orbitalRadius;
         }
       });
@@ -535,23 +556,23 @@ export function GalaxyMap() {
           }
         });
       }
-      
-      const animateComplexOrbit = (meshRef: React.MutableRefObject<THREE.Mesh | null>, curveRef: React.MutableRefObject<THREE.EllipseCurve | null>, groupRef: React.MutableRefObject<THREE.Group | null>) => {
-        if (meshRef.current && curveRef.current && meshRef.current.userData.orbitalParams && groupRef.current) {
-          const mesh = meshRef.current;
+
+      const animateComplexOrbit = (meshRefObj: React.MutableRefObject<THREE.Mesh | null>, curveRefObj: React.MutableRefObject<THREE.EllipseCurve | null>, groupRefObj: React.MutableRefObject<THREE.Group | null>) => {
+        if (meshRefObj.current && curveRefObj.current && meshRefObj.current.userData.orbitalParams && groupRefObj.current) {
+          const mesh = meshRefObj.current;
           const data = mesh.userData as CelestialBodyInfo & { currentU: number };
           const params = data.orbitalParams!;
-          
-          const sunPosition = new THREE.Vector3(0,0,0); 
-          const localPositionOnEllipse2D = curveRef.current.getPoint(data.currentU);
+
+          const sunPosition = new THREE.Vector3(0,0,0);
+          const localPositionOnEllipse2D = curveRefObj.current.getPoint(data.currentU);
           const localPositionOnEllipse = new THREE.Vector3(localPositionOnEllipse2D.x, localPositionOnEllipse2D.y, 0);
-          
-          groupRef.current.updateMatrixWorld(true);
-          const worldPositionVec3 = localPositionOnEllipse.clone().applyMatrix4(groupRef.current.matrixWorld);
+
+          groupRefObj.current.updateMatrixWorld(true);
+          const worldPositionVec3 = localPositionOnEllipse.clone().applyMatrix4(groupRefObj.current.matrixWorld);
 
           const distanceToSun = worldPositionVec3.distanceTo(sunPosition);
 
-          const minSpeedFactor = 0.0005 / (params.orbitalPeriodYears / 76) ; 
+          const minSpeedFactor = 0.0005 / (params.orbitalPeriodYears / 76) ;
           const maxSpeedFactor = 0.1 / (params.orbitalPeriodYears / 76);
 
           let speedFactor;
@@ -564,12 +585,12 @@ export function GalaxyMap() {
               speedFactor = maxSpeedFactor - (normalizedDistance * (maxSpeedFactor - minSpeedFactor));
               speedFactor = Math.max(minSpeedFactor, speedFactor);
           }
-          
-          data.currentU += speedFactor * deltaTime * 0.5; 
+
+          data.currentU += speedFactor * deltaTime * 0.5;
           if (data.currentU >= 1) {
-              data.currentU = 0; 
+              data.currentU = 0;
           }
-          
+
           mesh.position.set(localPositionOnEllipse.x, localPositionOnEllipse.y, 0);
           mesh.rotation.y += 0.005;
         }
@@ -581,13 +602,13 @@ export function GalaxyMap() {
 
 
       if (milkyWayParticlesRef.current && milkyWayMaterialRef.current && controlsRef.current) {
-        milkyWayParticlesRef.current.rotation.y += 0.00002 * deltaTime * 60; 
+        milkyWayParticlesRef.current.rotation.y += 0.00002 * deltaTime * 60;
         const distance = controlsRef.current.getDistance();
         let opacity = 0;
         if (distance > GALAXY_VISIBILITY_START_DISTANCE) {
           opacity = Math.min(1, (distance - GALAXY_VISIBILITY_START_DISTANCE) / (GALAXY_VISIBILITY_FULL_DISTANCE - GALAXY_VISIBILITY_START_DISTANCE));
         }
-        milkyWayMaterialRef.current.opacity = opacity * 0.7; 
+        milkyWayMaterialRef.current.opacity = opacity * 0.7;
       }
 
 
@@ -603,18 +624,51 @@ export function GalaxyMap() {
     };
     window.addEventListener('resize', handleResize);
 
+    // ISS Data Fetching
+    const fetchIssData = async () => {
+      try {
+        const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: ISSData = await response.json();
+        setIssData(data);
+        setIssError(null);
+      } catch (error) {
+        console.error("Failed to fetch ISS data:", error);
+        setIssError(error instanceof Error ? error.message : "Unknown error fetching ISS data");
+      }
+    };
+
+    fetchIssData(); // Initial fetch
+    issFetchIntervalIdRef.current = setInterval(fetchIssData, 5000); // Fetch every 5 seconds
+
+
     return () => {
       window.removeEventListener('resize', handleResize);
       currentMount.removeEventListener('click', onClick);
+      if (issFetchIntervalIdRef.current) {
+        clearInterval(issFetchIntervalIdRef.current);
+      }
+
+      if (issMeshRef.current && earthMeshRef.current && earthMeshRef.current.children.includes(issMeshRef.current)) {
+        earthMeshRef.current.remove(issMeshRef.current);
+      }
+      issMeshRef.current?.geometry?.dispose();
+      (issMeshRef.current?.material as THREE.Material)?.dispose();
+      issMeshRef.current = null;
+      earthMeshRef.current = null;
+
+
       if (rendererRef.current && currentMount.contains(rendererRef.current.domElement)) {
         currentMount.removeChild(rendererRef.current.domElement);
       }
-      
+
       if (controlsRef.current) controlsRef.current.dispose();
-      
-      const disposeGroup = (groupRef: React.MutableRefObject<THREE.Group | null>) => {
-        if (groupRef.current && sceneRef.current) {
-          groupRef.current.traverse(object => {
+
+      const disposeGroup = (groupRefObj: React.MutableRefObject<THREE.Group | null>) => {
+        if (groupRefObj.current && sceneRef.current) {
+          groupRefObj.current.traverse(object => {
             if (object instanceof THREE.Mesh) {
               if (object.geometry) object.geometry.dispose();
               if (Array.isArray(object.material)) {
@@ -627,13 +681,13 @@ export function GalaxyMap() {
                if (object.material) (object.material as THREE.Material).dispose();
             }
           });
-          sceneRef.current.remove(groupRef.current);
+          sceneRef.current.remove(groupRefObj.current);
         }
-        groupRef.current = null;
+        groupRefObj.current = null;
       };
 
       disposeGroup(cometGroupRef);
-      cometMeshRef.current = null; 
+      cometMeshRef.current = null;
       cometOrbitCurveRef.current = null;
 
       disposeGroup(plutoGroupRef);
@@ -666,7 +720,7 @@ export function GalaxyMap() {
                  if (object.material) (object.material as THREE.Material).dispose();
             }
         });
-        sceneRef.current.remove(asteroidsGroupRef.current); 
+        sceneRef.current.remove(asteroidsGroupRef.current);
       }
       asteroidsGroupRef.current = null;
       if (asteroidGeometryRef.current) asteroidGeometryRef.current.dispose();
@@ -675,11 +729,11 @@ export function GalaxyMap() {
       asteroidTextureRef.current = null;
       if (asteroidMaterialRef.current) asteroidMaterialRef.current.dispose();
       asteroidMaterialRef.current = null;
-      
+
 
       if (sceneRef.current) {
         sceneRef.current.traverse(object => {
-           if (object instanceof THREE.Mesh && ![cometMeshRef.current, plutoMeshRef.current, erisMeshRef.current].includes(object)) { 
+           if (object instanceof THREE.Mesh && ![cometMeshRef.current, plutoMeshRef.current, erisMeshRef.current, issMeshRef.current].includes(object)) { // Also exclude ISS mesh from general disposal if it's managed separately by its ref
                 if (object.geometry) object.geometry.dispose();
                 if (Array.isArray(object.material)) {
                     object.material.forEach(material => {
@@ -700,15 +754,51 @@ export function GalaxyMap() {
         });
       }
       planetsRef.current = [];
-      if (rendererRef.current) rendererRef.current.dispose(); 
-      rendererRef.current = null; 
-      sceneRef.current = null; 
+      if (rendererRef.current) rendererRef.current.dispose();
+      rendererRef.current = null;
+      sceneRef.current = null;
     };
-  }, []);
-  
+  }, []); // Empty dependency array means this runs once on mount and cleanup on unmount
+
+  // useEffect for updating ISS position
+  useEffect(() => {
+    if (issData && earthMeshRef.current && sceneRef.current) {
+      if (!issMeshRef.current) {
+        const issGeometry = new THREE.SphereGeometry(0.03, 16, 16); // Small sphere for ISS
+        const issMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2, toneMapped: false });
+        issMeshRef.current = new THREE.Mesh(issGeometry, issMaterial);
+        issMeshRef.current.name = "ISS";
+        issMeshRef.current.userData = { name: "ISS", type: "Satellite", dataAiHint: "satellite space station" };
+        earthMeshRef.current.add(issMeshRef.current); // Add ISS as child of Earth
+      }
+
+      const earthModelRadius = 1.0; // Earth's 'size' in solarSystemData
+      const altitudeInSceneUnits = (issData.altitude / EARTH_RADIUS_KM) * earthModelRadius;
+      const totalRadius = earthModelRadius + altitudeInSceneUnits;
+
+      const latRad = issData.latitude * (Math.PI / 180);
+      const lonRad = issData.longitude * (Math.PI / 180);
+
+      // Y-up coordinate system:
+      // x = R * cos(lat) * sin(lon)
+      // y = R * sin(lat)
+      // z = R * cos(lat) * cos(lon)
+      const x = totalRadius * Math.cos(latRad) * Math.sin(lonRad);
+      const y = totalRadius * Math.sin(latRad);
+      const z = totalRadius * Math.cos(latRad) * Math.cos(lonRad);
+
+      issMeshRef.current.position.set(x, y, z);
+      issMeshRef.current.visible = true;
+
+    } else if (issMeshRef.current) {
+      issMeshRef.current.visible = false;
+    }
+  }, [issData]); // Rerun when issData changes
+
+
   const zoom = (factor: number) => {
     if(controlsRef.current) {
-      controlsRef.current.dollyIn(factor); 
+      controlsRef.current.dollyIn(factor);
       controlsRef.current.update();
     }
   }
@@ -716,15 +806,15 @@ export function GalaxyMap() {
   const resetView = () => {
     if (controlsRef.current && cameraRef.current) {
       controlsRef.current.reset();
-      cameraRef.current.position.set(0, 45, 60); 
-      controlsRef.current.target.set(0,0,0); 
+      cameraRef.current.position.set(0, 45, 60);
+      controlsRef.current.target.set(0,0,0);
       controlsRef.current.update();
     }
   }
 
   return (
     <div className="relative w-full h-[calc(100vh-10rem)] rounded-lg overflow-hidden border border-primary/30 shadow-2xl shadow-primary/20">
-      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets dwarf planets comet proxima centauri milky way galaxy" />
+      <div ref={mountRef} className="w-full h-full" data-ai-hint="solar system planets dwarf planets comet proxima centauri milky way galaxy international space station" />
       <div className="absolute top-4 right-4 flex flex-col gap-2">
         <Button size="icon" onClick={() => zoom(1.2)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomInIcon className="w-5 h-5" /></Button>
         <Button size="icon" onClick={() => zoom(0.8)} className="glass-card !bg-background/50 !border-accent/50 hover:!bg-accent/30 btn-glow-accent"><ZoomOutIcon className="w-5 h-5" /></Button>
@@ -773,6 +863,11 @@ export function GalaxyMap() {
           </motion.div>
         )}
       </AnimatePresence>
+      {issError && (
+        <div className="absolute bottom-4 left-4 bg-destructive/80 text-destructive-foreground p-3 rounded-md text-xs shadow-lg">
+          ISS Data Error: {issError}
+        </div>
+      )}
     </div>
   );
 }
