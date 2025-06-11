@@ -992,7 +992,7 @@ export function GalaxyMap() {
                 <p><strong>Type:</strong> {selectedBody.type}</p>
                 {selectedBody.description && <p>{selectedBody.description}</p>}
                 <p><strong>Surface Gravity:</strong> {selectedBody.gravity}</p>
-                <p><strong>Key Resources:</strong> {selectedBody.resources.join(', ')}</p>
+                <p><strong>Key Resources:</strong> {selectedBody.resources && selectedBody.resources.length > 0 ? selectedBody.resources.join(', ') : 'N/A'}</p>
                 <p><strong>Terrain Type:</strong> {selectedBody.terrain}</p>
                 <p><strong>Primary Biome:</strong> {selectedBody.biome}</p>
                 {(selectedBody.type === 'Comet' || (selectedBody.type === 'Dwarf Planet' && selectedBody.name !== 'Ceres' && selectedBody.orbitalParams)) && selectedBody.orbitalParams && (
@@ -1029,3 +1029,4 @@ export function GalaxyMap() {
     </div>
   );
 }
+
