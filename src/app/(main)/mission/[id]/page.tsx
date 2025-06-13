@@ -1,34 +1,35 @@
 // src/app/(main)/mission/[id]/page.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, use } from "react"; // Import use
 import { KeplerGame } from "@/components/mission-game/KeplerGame";
 import { AsteroidGame } from "@/components/mission-game/AsteroidGame";
 import { MarsGame } from "@/components/mission-game/MarsGame";
 import { useMissionStore, type MissionId } from "@/stores/mission-game-store";
-import { AlertCircle } from "lucide-react"; // Removed Construction as it's not used
+import { AlertCircle } from "lucide-react"; 
 
 interface MissionPageProps {
-  params: {
+  params: Promise<{ // params is now expected to be a Promise
     id: string;
-  };
+  }>;
 }
 
-export default function MissionPage({ params }: MissionPageProps) {
+export default function MissionPage({ params: paramsPromise }: MissionPageProps) {
+  const params = use(paramsPromise); // Unwrap the promise using React.use()
   const { loadMissionData, resetMission } = useMissionStore();
   // missionTitle is part of the store, can be accessed by components that use the store
 
   useEffect(() => {
     // Reset mission state before loading new data to ensure clean state
     resetMission(); 
-    loadMissionData(params.id as MissionId);
+    loadMissionData(params.id as MissionId); // params.id is now from the resolved object
 
     // Cleanup function to reset store when component unmounts or params.id changes
     // This is important to avoid stale state if user navigates away and back
     return () => {
       resetMission();
     };
-  }, [params.id, loadMissionData, resetMission]);
+  }, [params.id, loadMissionData, resetMission]); // params.id is a stable string here
 
   const renderMissionContent = () => {
     switch (params.id) {
