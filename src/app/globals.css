@@ -4,88 +4,88 @@
 
 @layer base {
   :root {
-    --background: 300 100% 5.1%; /* Dark Purple #1A001A */
-    --foreground: 0 0% 98%; /* Almost White */
+    --background: 225 50% 10%; /* Dark Navy Blue */
+    --foreground: 220 25% 95%; /* Off-white with a hint of blue */
 
-    --card: 300 100% 8%; /* Opaque slightly lighter Dark Purple for default cards */
-    --card-foreground: 0 0% 98%;
+    --card: 225 50% 13%; /* Slightly lighter navy for cards */
+    --card-foreground: 220 25% 95%;
 
-    --popover: 300 100% 7%; /* Darker purple for popovers */
-    --popover-foreground: 0 0% 98%;
+    --popover: 225 50% 9%; /* Darker navy for popovers */
+    --popover-foreground: 220 25% 95%;
 
-    --primary: 111 100% 54%; /* Neon Green #39FF14 */
-    --primary-foreground: 300 100% 3%; /* Darkest Purple for text on neon green */
+    --primary: 180 80% 60%; /* Vibrant Cyan */
+    --primary-foreground: 225 50% 5%; /* Very dark navy for text on cyan */
 
-    --secondary: 183 100% 65%; /* Darker Electric Blue for secondary elements */
-    --secondary-foreground: 300 100% 3%; /* Darkest Purple for text on electric blue */
+    --secondary: 200 70% 50%; /* Medium Blue */
+    --secondary-foreground: 225 50% 5%;
 
-    --muted: 300 50% 15%; /* Muted purple */
-    --muted-foreground: 0 0% 70%; /* Lighter muted foreground */
+    --muted: 225 30% 25%; /* Muted navy/dark grey-blue */
+    --muted-foreground: 220 20% 75%; /* Lighter grey-blue for muted text */
 
-    --accent: 183 100% 74.3%; /* Electric Blue #7DF9FF */
-    --accent-foreground: 300 100% 3%; /* Darkest Purple for text on electric blue */
+    --accent: 200 90% 70%; /* Bright Sky Blue */
+    --accent-foreground: 225 50% 5%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%; /* Original Destructive Red */
+    --destructive-foreground: 0 0% 98%; /* Original Destructive Foreground */
 
-    --border: 111 100% 54%; /* Neon Green for borders, use with opacity */
-    --input: 300 70% 12%; /* Dark purple for input backgrounds */
-    --ring: 183 100% 74.3%; /* Electric Blue for focus rings */
+    --border: 180 80% 60%; /* Primary Cyan for borders */
+    --input: 225 40% 18%; /* Darker input background */
+    --ring: 200 90% 70%; /* Accent Sky Blue for focus rings */
     
-    --chart-1: 111 100% 60%;
-    --chart-2: 183 100% 70%;
-    --chart-3: 270 80% 65%;
-    --chart-4: 30 80% 60%;
-    --chart-5: 210 75% 55%;
+    --chart-1: 180 70% 55%; /* Cyan */
+    --chart-2: 200 70% 65%; /* Sky Blue */
+    --chart-3: 220 60% 70%; /* Periwinkle/Light Blue */
+    --chart-4: 160 60% 50%; /* Teal */
+    --chart-5: 240 50% 60%; /* Indigo/Purple-Blue */
 
     --radius: 0.5rem;
 
-    --sidebar-background: 300 100% 7%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 111 100% 54%;
-    --sidebar-primary-foreground: 300 100% 3%;
-    --sidebar-accent: 183 100% 74.3%;
-    --sidebar-accent-foreground: 300 100% 3%;
-    --sidebar-border: 111 100% 54% / 0.3; /* Neon Green border with alpha */
-    --sidebar-ring: 183 100% 74.3%;
+    --sidebar-background: 225 50% 12%; /* Slightly different navy for sidebar */
+    --sidebar-foreground: 220 20% 90%;
+    --sidebar-primary: 180 80% 60%; /* Cyan */
+    --sidebar-primary-foreground: 225 50% 5%;
+    --sidebar-accent: 200 90% 70%; /* Sky Blue */
+    --sidebar-accent-foreground: 225 50% 5%;
+    --sidebar-border: 180 80% 60% / 0.3; /* Primary Cyan border with alpha */
+    --sidebar-ring: 200 90% 70%;
   }
 
   /* Ensure dark theme variables are applied as base */
   .dark {
-    --background: 300 100% 5.1%;
-    --foreground: 0 0% 98%;
-    --card: 300 100% 8%;
-    --card-foreground: 0 0% 98%;
-    --popover: 300 100% 7%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 111 100% 54%;
-    --primary-foreground: 300 100% 3%;
-    --secondary: 183 100% 65%;
-    --secondary-foreground: 300 100% 3%;
-    --muted: 300 50% 15%;
-    --muted-foreground: 0 0% 70%;
-    --accent: 183 100% 74.3%;
-    --accent-foreground: 300 100% 3%;
-    --destructive: 0 70% 50%;
+    --background: 225 50% 10%; 
+    --foreground: 220 25% 95%;
+    --card: 225 50% 13%; 
+    --card-foreground: 220 25% 95%;
+    --popover: 225 50% 9%; 
+    --popover-foreground: 220 25% 95%;
+    --primary: 180 80% 60%; 
+    --primary-foreground: 225 50% 5%;
+    --secondary: 200 70% 50%; 
+    --secondary-foreground: 225 50% 5%;
+    --muted: 225 30% 25%; 
+    --muted-foreground: 220 20% 75%;
+    --accent: 200 90% 70%; 
+    --accent-foreground: 225 50% 5%;
+    --destructive: 0 70% 50%; /* Kept original dark destructive */
     --destructive-foreground: 0 0% 98%;
-    --border: 111 100% 54%;
-    --input: 300 70% 12%;
-    --ring: 183 100% 74.3%;
+    --border: 180 80% 60%;
+    --input: 225 40% 18%;
+    --ring: 200 90% 70%;
     
-    --chart-1: 111 100% 60%;
-    --chart-2: 183 100% 70%;
-    --chart-3: 270 80% 65%;
-    --chart-4: 30 80% 60%;
-    --chart-5: 210 75% 55%;
+    --chart-1: 180 70% 55%;
+    --chart-2: 200 70% 65%;
+    --chart-3: 220 60% 70%;
+    --chart-4: 160 60% 50%;
+    --chart-5: 240 50% 60%;
 
-    --sidebar-background: 300 100% 7%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 111 100% 54%;
-    --sidebar-primary-foreground: 300 100% 3%;
-    --sidebar-accent: 183 100% 74.3%;
-    --sidebar-accent-foreground: 300 100% 3%;
-    --sidebar-border: 111 100% 54% / 0.3;
-    --sidebar-ring: 183 100% 74.3%;
+    --sidebar-background: 225 50% 12%;
+    --sidebar-foreground: 220 20% 90%;
+    --sidebar-primary: 180 80% 60%;
+    --sidebar-primary-foreground: 225 50% 5%;
+    --sidebar-accent: 200 90% 70%;
+    --sidebar-accent-foreground: 225 50% 5%;
+    --sidebar-border: 180 80% 60% / 0.3;
+    --sidebar-ring: 200 90% 70%;
   }
 }
 
@@ -102,7 +102,7 @@
 @layer components {
   .glass-card {
     @apply bg-card/10 backdrop-blur-md border border-primary/30 rounded-xl shadow-lg;
-    background-color: hsla(var(--card-bg, var(--background)) / 0.2); /* Fallback to background if --card-bg not set, with alpha */
+    background-color: hsla(var(--card-bg, var(--background)) / 0.2); 
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid hsla(var(--primary) / 0.4);
