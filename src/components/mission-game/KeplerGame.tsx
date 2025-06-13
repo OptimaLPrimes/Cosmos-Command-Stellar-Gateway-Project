@@ -7,7 +7,7 @@ import { CrewPanel } from "@/components/mission-game/CrewPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMissionStore } from "@/stores/mission-game-store";
-import { ScanLine, Telescope, Rover, Bot } from "lucide-react";
+import { ScanLine, Telescope, Rover, Bot, SendToBack } from "lucide-react";
 import Image from "next/image";
 
 export function KeplerGame() {
@@ -16,6 +16,8 @@ export function KeplerGame() {
     objectives,
     crew,
     progress,
+    imageUrl,
+    dataAiHint,
     completeObjective,
     updateCrewStatus,
   } = useMissionStore();
@@ -25,10 +27,10 @@ export function KeplerGame() {
       completeObjective(objId);
       if (crewMemberName) {
         updateCrewStatus(crewMemberName, "Tasking...");
-        // Simulate task completion
+        // Simulate task completion with varied time
         setTimeout(() => {
           updateCrewStatus(crewMemberName, "Idle");
-        }, 3000);
+        }, 2000 + Math.random() * 3000);
       }
     }
   };
@@ -52,12 +54,12 @@ export function KeplerGame() {
               <div className="p-4 rounded-lg bg-black/20 border border-primary/20">
                 <h3 className="text-lg font-semibold text-primary mb-2">Planetary Scan</h3>
                 <Image 
-                  src="https://placehold.co/600x300/1A001A/39FF14.png?text=Kepler-186f+Surface" 
+                  src={imageUrl || "https://placehold.co/600x300/1A001A/39FF14.png?text=Kepler-186f+Surface"} 
                   alt="Kepler-186f Surface Scan" 
                   width={600} 
                   height={300} 
                   className="w-full h-auto rounded-md object-cover mb-2"
-                  data-ai-hint="exoplanet surface landscape"
+                  data-ai-hint={dataAiHint || "exoplanet surface landscape"}
                 />
                 <p className="text-sm text-muted-foreground">
                   Current sensor readings indicate a rocky terrain with potential for liquid water. Atmospheric composition analysis pending.
@@ -66,32 +68,32 @@ export function KeplerGame() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <Button 
-                    onClick={() => handleObjectiveAction("deploy_rover", "Nova")} 
-                    disabled={objectives.find(obj => obj.id === "deploy_rover")?.completed}
+                    onClick={() => handleObjectiveAction("kepler_deploy_rover", "Nova 'Zip' Skyrider")} 
+                    disabled={objectives.find(obj => obj.id === "kepler_deploy_rover")?.completed}
                     className="w-full bg-accent hover:bg-accent/90 text-accent-foreground btn-glow-accent"
                   >
                     <Rover className="mr-2 h-5 w-5" /> Deploy Rover
                   </Button>
                   <Button 
-                    onClick={() => handleObjectiveAction("scan_terrain_samples", "Tars")}
-                    disabled={objectives.find(obj => obj.id === "scan_terrain_samples")?.completed}
+                    onClick={() => handleObjectiveAction("kepler_scan_terrain", "TARS Unit 7")}
+                    disabled={objectives.find(obj => obj.id === "kepler_scan_terrain")?.completed || !objectives.find(obj => obj.id === "kepler_deploy_rover")?.completed}
                     className="w-full bg-accent hover:bg-accent/90 text-accent-foreground btn-glow-accent"
                   >
-                    <ScanLine className="mr-2 h-5 w-5" /> Scan Terrain Samples (3)
+                    <ScanLine className="mr-2 h-5 w-5" /> Scan Terrain Samples
                   </Button>
                   <Button 
-                    onClick={() => handleObjectiveAction("measure_atmosphere", "Orion")}
-                    disabled={objectives.find(obj => obj.id === "measure_atmosphere")?.completed}
+                    onClick={() => handleObjectiveAction("kepler_measure_atmosphere", "Dr. Orion Kael")}
+                    disabled={objectives.find(obj => obj.id === "kepler_measure_atmosphere")?.completed || !objectives.find(obj => obj.id === "kepler_deploy_rover")?.completed}
                     className="w-full bg-accent hover:bg-accent/90 text-accent-foreground btn-glow-accent"
                   >
                     <Bot className="mr-2 h-5 w-5" /> Measure Atmosphere
                   </Button>
                   <Button 
-                    onClick={() => handleObjectiveAction("return_data_to_ship")}
-                    disabled={!objectives.every(obj => obj.id === "return_data_to_ship" || obj.completed) || objectives.find(obj => obj.id === "return_data_to_ship")?.completed}
+                    onClick={() => handleObjectiveAction("kepler_return_data", "Dr. Aris Thorne")}
+                    disabled={!objectives.filter(o => o.id !== "kepler_return_data").every(obj => obj.completed) || objectives.find(obj => obj.id === "kepler_return_data")?.completed}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground btn-glow-primary"
                   >
-                    Return Data to Ship
+                    <SendToBack className="mr-2 h-5 w-5" /> Return Data to Ship
                   </Button>
               </div>
             </CardContent>
