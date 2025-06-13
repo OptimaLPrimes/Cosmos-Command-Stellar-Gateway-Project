@@ -7,7 +7,7 @@ import { CrewPanel } from "@/components/mission-game/CrewPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMissionStore } from "@/stores/mission-game-store";
-import { ScanLine, Telescope, Rover, Bot, SendToBack } from "lucide-react";
+import { ScanLine, Telescope, Navigation2, Bot, SendToBack } from "lucide-react";
 import Image from "next/image";
 
 export function KeplerGame() {
@@ -37,7 +37,7 @@ export function KeplerGame() {
 
   return (
     <div className="space-y-6">
-      <GameHUD missionTitle={missionTitle} progress={progress} />
+      <GameHUD missionTitle={missionTitle || "Explore Kepler-186f"} progress={progress || 0} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
@@ -72,7 +72,7 @@ export function KeplerGame() {
                     disabled={objectives.find(obj => obj.id === "kepler_deploy_rover")?.completed}
                     className="w-full bg-accent hover:bg-accent/90 text-accent-foreground btn-glow-accent"
                   >
-                    <Rover className="mr-2 h-5 w-5" /> Deploy Rover
+                    <Navigation2 className="mr-2 h-5 w-5" /> Deploy Rover
                   </Button>
                   <Button 
                     onClick={() => handleObjectiveAction("kepler_scan_terrain", "TARS Unit 7")}
