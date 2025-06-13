@@ -4,7 +4,8 @@
 import { useState, useEffect } from "react";
 import { MissionSummaryCard } from "@/components/dashboard/MissionSummaryCard";
 import { DailyQuizCard } from "@/components/dashboard/DailyQuizCard";
-import { Zap, BarChart3, Activity } from "lucide-react";
+import { PeopleInSpaceCard } from "@/components/dashboard/PeopleInSpaceCard";
+import { Zap, BarChart3, Activity, UsersRound } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 const sampleMissions = [
@@ -65,29 +66,18 @@ export default function DashboardPage() {
   const xpForNextLevel = totalXp % XP_PER_LEVEL;
   const progressToNextLevel = (xpForNextLevel / XP_PER_LEVEL) * 100;
 
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-10"> {/* Increased overall spacing */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-headline font-bold text-glow-primary tracking-wider">Mission Dashboard</h1>
-        <div className="flex items-center gap-2 p-2 px-3 rounded-md bg-card/20 border border-accent/30 text-sm text-accent">
+        <h1 className="text-4xl font-headline font-bold text-glow-primary tracking-wider">Cosmos Command Center</h1>
+        <div className="flex items-center gap-2 p-2 px-3 rounded-md bg-card/20 border border-accent/30 text-sm text-accent shrink-0">
           <Zap className="w-4 h-4 animate-pulse" />
           <span>System Status: All Systems Nominal</span>
         </div>
       </div>
 
       <section>
-        <h2 className="text-2xl font-headline font-semibold mb-4 text-glow-accent">Active & Upcoming Missions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sampleMissions.map((mission) => (
-            <MissionSummaryCard key={mission.id} {...mission} data-ai-hint={mission.dataAiHint} />
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-2xl font-headline font-semibold mb-4 text-glow-accent">Daily Galactic Challenge</h2>
-        <DailyQuizCard onCorrectAnswer={handleQuizCorrect} />
+        <PeopleInSpaceCard />
       </section>
 
       <section>
@@ -120,6 +110,21 @@ export default function DashboardPage() {
             </div>
         </div>
       </section>
+      
+      <section>
+        <h2 className="text-2xl font-headline font-semibold mb-4 text-glow-accent">Active & Upcoming Missions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sampleMissions.map((mission) => (
+            <MissionSummaryCard key={mission.id} {...mission} data-ai-hint={mission.dataAiHint} />
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-headline font-semibold mb-4 text-glow-accent">Daily Galactic Challenge</h2>
+        <DailyQuizCard onCorrectAnswer={handleQuizCorrect} />
+      </section>
+
     </div>
   );
 }
