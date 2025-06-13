@@ -106,6 +106,8 @@ export function DailyQuizCard({ onCorrectAnswer }: DailyQuizCardProps) {
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
 
   const loadNewQuestion = useCallback(() => {
     const randomIndex = Math.floor(Math.random() * sampleQuestions.length);
@@ -116,6 +118,7 @@ export function DailyQuizCard({ onCorrectAnswer }: DailyQuizCardProps) {
     setAiExplanation(null);
     setIsLoadingExplanation(false);
     setShowExplanation(false);
+    setFetchError(null);
   }, []);
 
   useEffect(() => {
@@ -126,6 +129,7 @@ export function DailyQuizCard({ onCorrectAnswer }: DailyQuizCardProps) {
     if (!selectedAnswerId || !currentQuestion) return;
 
     setIsSubmitted(true);
+    setFetchError(null);
     const correct = selectedAnswerId === currentQuestion.correctAnswerId;
     setIsCorrect(correct);
 
@@ -149,7 +153,14 @@ export function DailyQuizCard({ onCorrectAnswer }: DailyQuizCardProps) {
         setAiExplanation(result.explanation);
       } catch (error) {
         console.error("Error getting AI explanation:", error);
-        setAiExplanation("An error occurred while fetching the explanation. Perhaps the AI is stargazing? Try again.");
+        let message = "An error occurred while fetching the explanation. Perhaps the AI is stargazing?";
+        if (error instanceof Error && error.message.toLowerCase().includes('failed to fetch')) {
+            message = "Network error fetching AI explanation. Please check your connection or API key setup."
+        } else if (error instanceof Error) {
+            message = `Error: ${error.message}`;
+        }
+        setAiExplanation(message);
+        setFetchError(message); // Keep for specific display if needed
       } finally {
         setIsLoadingExplanation(false);
       }
@@ -269,7 +280,7 @@ export function DailyQuizCard({ onCorrectAnswer }: DailyQuizCardProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{delay: 0.2}}
-                className="mt-4 p-4 glass-card border-accent/50" // Changed from Card to div with glass-card
+                className="mt-4 p-4 glass-card border-accent/50" 
             >
                 <h3 className="text-md font-semibold text-accent mb-2 flex items-center">
                     <HelpCircle className="w-5 h-5 mr-2"/> Cosmic Explanation

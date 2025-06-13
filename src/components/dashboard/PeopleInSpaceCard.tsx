@@ -23,7 +23,13 @@ export function PeopleInSpaceCard() {
         const result = await getPeopleInSpace();
         setData(result);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred");
+        let errorMessage = "An unknown error occurred while fetching astronaut data.";
+        if (err instanceof Error && err.message.toLowerCase().includes('failed to fetch')) {
+          errorMessage = "Failed to fetch live astronaut data. The service might be temporarily unavailable or there could be a network issue. Please try again later.";
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
         console.error("Error fetching people in space:", err);
       } finally {
         setIsLoading(false);
@@ -62,8 +68,8 @@ export function PeopleInSpaceCard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-destructive-foreground">Could not load live astronaut data: {error}</p>
-          <p className="text-sm text-muted-foreground mt-1">Please try again later.</p>
+          <p className="text-destructive-foreground">{error}</p>
+          <p className="text-sm text-muted-foreground mt-1">Please check your network or try again later.</p>
         </CardContent>
       </Card>
     );

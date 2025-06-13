@@ -60,9 +60,15 @@ export function ChatInterface() {
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error("Error asking question:", error);
+      let displayMessage = "Sorry, I encountered an error processing your request. Please try again.";
+      if (error instanceof Error && error.message.toLowerCase().includes('failed to fetch')) {
+        displayMessage = "A network error occurred while trying to reach the AI service. This could be due to your internet connection, the service being temporarily unavailable, or a missing API key for AI features. Please check your setup and try again later."
+      } else if (error instanceof Error) {
+        displayMessage = `Error: ${error.message}`;
+      }
       const errorMessage: Message = {
         id: Date.now().toString() + "-error",
-        text: "Sorry, I encountered an error. Please try again.",
+        text: displayMessage,
         sender: "ai",
         timestamp: new Date(),
       };
